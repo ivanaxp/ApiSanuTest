@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: sanuapi
+    env: docker
+    plan: free
+    dockerfilePath: SanuApiSolution/Dockerfile
