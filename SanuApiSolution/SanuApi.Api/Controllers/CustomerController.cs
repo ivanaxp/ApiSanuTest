@@ -96,7 +96,7 @@ namespace SanuApi.Api.Controllers
 
             await _customerService.AddClassesAsync(customerId, request);
 
-            return NoContent();
+            return Ok(true);
         }
 
         [HttpPost("{customerId}/membership")]
@@ -111,7 +111,7 @@ namespace SanuApi.Api.Controllers
 
             await _customerService.AddMembershipAsync(customerId, request);
 
-            return NoContent();
+            return Ok(true);
         }
 
         [HttpPost("{customerId}/absence")]
@@ -119,14 +119,14 @@ namespace SanuApi.Api.Controllers
         [SwaggerResponse(StatusCodes.Status204NoContent)]
         [SwaggerResponse(StatusCodes.Status400BadRequest)]
         [SwaggerResponse(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> AddAbsenceToCustomer(int customerId, [FromBody] AddCustomerMembershipRequestDto request)
+        public async Task<IActionResult> AddAbsenceToCustomer(int customerId, [FromBody] AddCustomerAbsenceRequestDto request)
         {
-            if (request == null || !request.MembershipIds.Any())
-                return BadRequest("Debe especificar al menos una asistencia.");
+            if (request == null )
+                return BadRequest("Debe especificar los datos de la asistencia");
 
-            await _customerService.AddMembershipAsync(customerId, request);
+            await _customerService.AddAbsenceAsync(customerId,request);
 
-            return NoContent();
+            return Ok(true);
         }
     }
 }

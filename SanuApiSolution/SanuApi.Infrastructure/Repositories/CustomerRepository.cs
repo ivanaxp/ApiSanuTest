@@ -285,5 +285,29 @@ namespace SanuApi.Infrastructure.Repositories
             }
         }
 
+        public async Task<int> AddAbsenceAsync(Absences entity)
+        {
+            try
+            {
+                if (_db.State != ConnectionState.Open)
+                    _db.Open();
+                var sql = @"INSERT INTO public.absences
+                            ( classid, customerid, dateabsence)
+                            VALUES(@classid, @customerid, @dateabsence)
+                            RETURNING id;";   
+                var newId = await _db.ExecuteScalarAsync<int>(sql, new
+                {
+                    classid = entity.classid,
+                    customerid = entity.customerid,
+                    dateabsence = entity.dateabsence
+                });
+                return newId;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Error al insertar la asistencia del cliente", e);
+            }
+        }
+
     }
 }

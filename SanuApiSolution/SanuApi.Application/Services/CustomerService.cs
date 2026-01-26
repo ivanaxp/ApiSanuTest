@@ -316,9 +316,11 @@ namespace SanuApi.Aplication.Services
             return result;
         }
 
-        public Task<bool> AddAbsenceAsync(int customerId, AddCustomerMembershipRequestDto membershipCustomer)
+        public async Task<bool> AddAbsenceAsync(int customerId, AddCustomerAbsenceRequestDto absence)
         {
-            throw new NotImplementedException();
+
+            var result = await _customerRepository.AddAbsenceAsync(new Absences { classid= absence.IdClass, customerid= absence.IdCustomer, dateabsence= absence.DateAbsence});
+            return result > 0;
         }
     }
 }

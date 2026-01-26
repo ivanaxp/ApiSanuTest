@@ -7,9 +7,9 @@ namespace SanuApi.Domain.Interfaces {
         Task<Entities.Customer?> FindByIdAsync(int id);
         Task<int> AddAsync(Entities.Customer entity);
         Task<bool> DeleteAsync(int id);
-        Task<IEnumerable<Entities.Classes>> GetClassesAsync(int id);
+        Task<IEnumerable<Classes>> GetClassesAsync(int id);
         Task<int> AddClassesAsync(ClassCustomer entity);
         Task<bool> UpdateAsync(Customer entity);
+        Task<int> AddAbsenceAsync(Absences entity);
     }
-
 }
