@@ -8,6 +8,8 @@ COPY SanuApiSolution/SanuApi.Api/SanuApi.Api.csproj SanuApi.Api/
 COPY SanuApiSolution/SanuApi.Application/SanuApi.Application.csproj SanuApi.Application/
 COPY SanuApiSolution/SanuApi.Domain/SanuApi.Domain.csproj SanuApi.Domain/
 COPY SanuApiSolution/SanuApi.Infrastructure/SanuApi.Infrastructure.csproj SanuApi.Infrastructure/
+COPY SanuApiSolution/SanuApi.Application.Tests/SanuApi.Application.Tests.csproj SanuApi.Application.Tests/
+COPY SanuApiSolution/SanuApi.Api.Tests/SanuApi.Api.Tests.csproj SanuApi.Api.Tests/
 
 # Restaurar dependencias
 RUN dotnet restore "SanuApi.sln"
