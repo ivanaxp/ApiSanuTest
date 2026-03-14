@@ -19,8 +19,8 @@ namespace SanuApi.Api.Controllers
 
 
         [HttpGet]
-        [SwaggerOperation(Summary = "Obtiene todos los productos", Description = "Devuelve una lista con todos los productos disponibles en la base de datos")]
-        [SwaggerResponse(200, "Lista de productos", typeof(IEnumerable<CustomerFindResponseDto>))]
+        [SwaggerOperation(Summary = "Obtiene todos los clientes", Description = "Devuelve una lista con todos los clientes disponibles en la base de datos")]
+        [SwaggerResponse(200, "Lista de clientes", typeof(IEnumerable<CustomerFindResponseDto>))]
         public async Task<ActionResult<IEnumerable<CustomerFindResponseDto>>> GetAll([FromQuery] bool? active)
         {
             var customers = await _customerService.GetAllAsync(active);
@@ -29,9 +29,9 @@ namespace SanuApi.Api.Controllers
 
 
         [HttpGet("{id}")]
-        [SwaggerOperation(Summary = "Obtiene un customer por ID", Description = "Devuelve un customer específico si existe")]
+        [SwaggerOperation(Summary = "Obtiene un customer por ID", Description = "Devuelve un customer especÃ­fico si existe")]
         [SwaggerResponse(200, "Customer encontrado", typeof(CutsomerFindByIdResponseDto))]
-        [SwaggerResponse(404, "No se encontró el producto")]
+        [SwaggerResponse(404, "No se encontrÃ³ el cliente")]
         public async Task<ActionResult<CutsomerFindByIdResponseDto>> GetById(int id)
         {
             var coustomer = await _customerService.FindByIdAsync(id);
@@ -41,31 +41,45 @@ namespace SanuApi.Api.Controllers
 
 
         [HttpPost]
-        [SwaggerOperation(Summary = "Crea un nuevo producto", Description = "Inserta un nuevo producto en la base de datos")]
-        [SwaggerResponse(201, "Producto creado correctamente", typeof(int))]
-        [SwaggerResponse(400, "Datos inválidos")]
+        [SwaggerOperation(Summary = "Crea un nuevo cliente", Description = "Inserta un nuevo cliente en la base de datos")]
+        [SwaggerResponse(201, "Cliente creado correctamente", typeof(int))]
+        [SwaggerResponse(400, "Datos invÃ¡lidos")]
         public async Task<ActionResult<int>> Create([FromBody] CustomerAddRequestDto dto)
         {
-            var coustomerId = await _customerService.AddAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = coustomerId }, coustomerId);
+            try
+            {
+                var coustomerId = await _customerService.AddAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = coustomerId }, coustomerId);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
 
         [HttpPut("{id}")]
-        [SwaggerOperation(Summary = "Actualiza un producto existente", Description = "Modifica los datos de un producto por su ID")]
-        [SwaggerResponse(200, "Producto actualizado correctamente", typeof(bool))]
-        [SwaggerResponse(404, "No se encontró el producto")]
+        [SwaggerOperation(Summary = "Actualiza un Cliente existente", Description = "Modifica los datos de un cliente por su ID")]
+        [SwaggerResponse(200, "Cliente actualizado correctamente", typeof(bool))]
+        [SwaggerResponse(404, "No se encontro el producto")]
         public async Task<ActionResult<bool>> Update([FromBody] CustomerUpdateRequestDto dto)
         {
-            var customerUpdate = await _customerService.UpdateAsync(dto);
-            if (!customerUpdate) return NotFound();
-            return Ok(customerUpdate);
+            try
+            {
+                var customerUpdate = await _customerService.UpdateAsync(dto);
+                if (!customerUpdate) return NotFound();
+                return Ok(customerUpdate);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("No se encontrÃ³"))
+            {
+                return NotFound(ex.Message);
+            }
         }
 
         [HttpDelete("{id}")]
-        [SwaggerOperation(Summary = "Elimina un producto", Description = "Borra un producto de la base de datos por su ID")]
-        [SwaggerResponse(204, "Producto eliminado correctamente")]
-        [SwaggerResponse(404, "No se encontró el producto")]
+        [SwaggerOperation(Summary = "Elimina un Cliente", Description = "Borra un Cliente de la base de datos por su ID")]
+        [SwaggerResponse(204, "Cliente eliminado correctamente")]
+        [SwaggerResponse(404, "No se encontro el cliente")]
         public async Task<ActionResult> Delete(int id)
         {
             var deleted = await _customerService.DeleteAsync(id);
@@ -76,7 +90,7 @@ namespace SanuApi.Api.Controllers
         [HttpGet("{id}/classes")]
         [SwaggerOperation(Summary = "Obtiene un listado de clases por ID", Description = "Devuelve un listado de clases")]
         [SwaggerResponse(200, "Customer encontrado", typeof(IEnumerable<ClassCustomerResponseDto>))]
-        [SwaggerResponse(404, "No se encontró las clases")]
+        [SwaggerResponse(404, "No se encontrï¿½ las clases")]
         public async Task<ActionResult<CutsomerFindByIdResponseDto>> GetClasess(int id)
         {
             var coustomerClasses = await _customerService.GetClasses(id);
@@ -85,7 +99,7 @@ namespace SanuApi.Api.Controllers
         }
 
         [HttpPost("{customerId}/classes")]
-        [SwaggerOperation(Summary = "Agrega clases a un cliente", Description = "Asocia una o más clases a un cliente existente")]
+        [SwaggerOperation(Summary = "Agrega clases a un cliente", Description = "Asocia una o mï¿½s clases a un cliente existente")]
         [SwaggerResponse(StatusCodes.Status204NoContent)]
         [SwaggerResponse(StatusCodes.Status400BadRequest)]
         [SwaggerResponse(StatusCodes.Status404NotFound)]
@@ -100,14 +114,14 @@ namespace SanuApi.Api.Controllers
         }
 
         [HttpPost("{customerId}/membership")]
-        [SwaggerOperation(Summary = "Agrega membresía a un cliente", Description = "Asocia una o más membresia a un cliente existente")]
+        [SwaggerOperation(Summary = "Agrega membresï¿½a a un cliente", Description = "Asocia una o mï¿½s membresia a un cliente existente")]
         [SwaggerResponse(StatusCodes.Status204NoContent)]
         [SwaggerResponse(StatusCodes.Status400BadRequest)]
         [SwaggerResponse(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AddMembershipToCustomer(int customerId, [FromBody] AddCustomerMembershipRequestDto request)
         {
             if (request == null || !request.MembershipIds.Any())
-                return BadRequest("Debe especificar al menos una membresía.");
+                return BadRequest("Debe especificar al menos una membresï¿½a.");
 
             await _customerService.AddMembershipAsync(customerId, request);
 

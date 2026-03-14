@@ -30,5 +30,14 @@ namespace SanuApi.Infrastructure.Repositories
                 throw new InvalidOperationException("Error al insertar el cliente", e);
             }
         }
+
+        public async Task<bool> DeleteByCustomerIdAsync(int customerId)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            var sql = "DELETE FROM customer_x_membership WHERE customerid = @CustomerId";
+            var rows = await _db.ExecuteAsync(sql, new { CustomerId = customerId });
+            return rows >= 0;
+        }
     }
 }

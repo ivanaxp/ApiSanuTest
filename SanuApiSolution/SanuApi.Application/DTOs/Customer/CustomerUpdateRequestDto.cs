@@ -61,7 +61,7 @@ namespace SanuApi.Application.DTOs.Customer
         /// </summary>
         /// 
         [SwaggerSchema("Corresponde a los ids de los bjetivos seleccionado.")]
-        public  List<int?> idGoal { get; set; }
+        public List<int> idGoal { get; set; }
 
         /// <summary>
         /// Corresponde a los datos de salud del cliente.o.
@@ -75,13 +75,13 @@ namespace SanuApi.Application.DTOs.Customer
         /// </summary>
         /// 
         [SwaggerSchema("Corresponde a los ids de los ojetivos seleccionado.")]
-        public List<CustomerMemberShipRequestDto?> Memberships { get; set; }
+        public List<CustomerMemberShipRequestDto> Memberships { get; set; }
 
         /// <summary>
         /// Corresponde a las clases del cliente.
         /// </summary>
         /// 
         [SwaggerSchema("Corresponde a los ids de las clases seleccionadas.")]
-        public List<int?> CustomerClasses { get; set; }
+        public List<int> CustomerClasses { get; set; }
     }
 }

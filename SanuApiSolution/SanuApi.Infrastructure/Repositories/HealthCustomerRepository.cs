@@ -25,9 +25,9 @@ namespace SanuApi.Infrastructure.Repositories
         {
 
             var sql = @"
-        INSERT INTO healthcustomer (customerid, height, weight, alergics, medicalCondicion) 
+        INSERT INTO healthcustomer (customerid, height, weight, alergics, medicalCondicion)
         VALUES (@CustomerId, @Height, @Weight, @Alergics, @MedicalCondicion)
-        RETURNING id;"; 
+        RETURNING id;";
 
             try
             {
@@ -48,6 +48,39 @@ namespace SanuApi.Infrastructure.Repositories
             {
 
                 throw new InvalidOperationException($"Error al insertar la condición médica: {e.Message}", e);
+            }
+        }
+
+        public async Task<bool> UpsertAsync(HealthCustomer entity)
+        {
+            var sql = @"
+        INSERT INTO healthcustomer (customerid, height, weight, alergics, medicalCondicion)
+        VALUES (@CustomerId, @Height, @Weight, @Alergics, @MedicalCondicion)
+        ON CONFLICT (customerid) DO UPDATE SET
+            height          = EXCLUDED.height,
+            weight          = EXCLUDED.weight,
+            alergics        = EXCLUDED.alergics,
+            medicalCondicion = EXCLUDED.medicalCondicion;";
+
+            try
+            {
+                if (_db.State != ConnectionState.Open)
+                    _db.Open();
+
+                var rows = await _db.ExecuteAsync(sql, new
+                {
+                    CustomerId = entity.customerid,
+                    Height = entity.heigth,
+                    Weight = entity.weight,
+                    Alergics = entity.alergics,
+                    MedicalCondicion = entity.medicalCondicion
+                });
+
+                return rows > 0;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Error al actualizar la condición médica: {e.Message}", e);
             }
         }
     }

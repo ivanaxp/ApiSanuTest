@@ -207,6 +207,24 @@ namespace SanuApi.Infrastructure.Repositories
             return affectedRows > 0;
         }
 
+        public async Task<bool> DeleteClassesAsync(int customerId)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            var sql = "DELETE FROM class_x_customer WHERE customerid = @CustomerId";
+            var rows = await _db.ExecuteAsync(sql, new { CustomerId = customerId });
+            return rows >= 0;
+        }
+
+        public async Task<bool> DeleteGoalsAsync(int customerId)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            var sql = "DELETE FROM customer_x_goal WHERE customerid = @CustomerId";
+            var rows = await _db.ExecuteAsync(sql, new { CustomerId = customerId });
+            return rows >= 0;
+        }
+
         public async Task<IEnumerable<Classes>> GetClassesAsync(int id)
         {
             if (_db.State != ConnectionState.Open)

@@ -67,6 +67,11 @@ namespace SanuApi.Aplication.Services
 
         public async Task<int> AddAsync(CustomerAddRequestDto customer)
         {
+            if (!customer.Memberships.Any())
+                throw new ArgumentException("Debe especificar al menos una membresía.");
+            if (!customer.CustomerClasses.Any())
+                throw new ArgumentException("Debe especificar al menos una clase.");
+
             int idCustomer = 0;
             if (_db.State != ConnectionState.Open)
                 _db.Open();
@@ -258,7 +263,7 @@ namespace SanuApi.Aplication.Services
         public async Task<bool> UpdateAsync(CustomerUpdateRequestDto customerUpdate)
         {
             var customerExisting = await this._customerRepository.FindByIdAsync(customerUpdate.IdCustomer);
-            if (customerExisting == null) throw new InvalidOperationException("No se encontr� el cliente");
+            if (customerExisting == null) throw new InvalidOperationException("No se encontró el cliente");
 
             if (!string.IsNullOrWhiteSpace(customerUpdate.CustomerName))
                 customerExisting.customername = customerUpdate.CustomerName;
@@ -266,7 +271,7 @@ namespace SanuApi.Aplication.Services
             if (!string.IsNullOrWhiteSpace(customerUpdate.CustomerLastName))
                 customerExisting.customerlastname = customerUpdate.CustomerLastName;
 
-            if (customerUpdate.DateBirth != default)
+            if (customerUpdate.DateBirth.HasValue)
                 customerExisting.datebirth = customerUpdate.DateBirth.Value;
 
             if (customerUpdate.Dni.HasValue)
@@ -284,47 +289,70 @@ namespace SanuApi.Aplication.Services
             if (customerUpdate.IsMale.HasValue)
                 customerExisting.ismale = customerUpdate.IsMale;
 
-            
-            if (customerUpdate.Health != null)
-            {                
-                customerExisting.healthCustomer = new HealthCustomer
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            using var transaction = _db.BeginTransaction();
+            try
+            {
+                var result = await _customerRepository.UpdateAsync(customerExisting);
+                if (!result) throw new InvalidOperationException("No se pudo actualizar el cliente.");
+
+                if (customerUpdate.Health != null)
                 {
-                    alergics = customerUpdate.Health.Alergics,
-                    medicalCondicion = customerUpdate.Health.MedicalCondicion,
-                    heigth = customerUpdate.Health.Height,
-                    weight = customerUpdate.Health.Weight,
-                    customerid = customerExisting.id                    
-                };
-            }
-
-            
-            if (customerUpdate.idGoal != null && customerUpdate.idGoal.Any())
-            {
-                customerExisting.customerGoals = customerUpdate.idGoal
-                    .Where(g => g.HasValue)
-                    .Select(g => new CustomerGoal { goalid = g.Value, customerid = customerExisting.id })
-                    .ToList();
-            }
-
-            
-            if (customerUpdate.Memberships != null && customerUpdate.Memberships.Any())
-            {
-                customerExisting.customerMembership = customerUpdate.Memberships
-                    .Where(m => m != null)
-                    .Select(m => new CustomerMembership
+                    await _healthCustomerRepository.UpsertAsync(new HealthCustomer
                     {
                         customerid = customerExisting.id,
-                        membershipid = m.IdMembership,
-                        startdate = m.StartDate,
-                        enddate = m.EndDate                        
-                    })
-                    .ToList();
-            }         
-           
+                        heigth = customerUpdate.Health.Height,
+                        weight = customerUpdate.Health.Weight,
+                        alergics = customerUpdate.Health.Alergics,
+                        medicalCondicion = customerUpdate.Health.MedicalCondicion
+                    });
+                }
 
-           
-            var result = await _customerRepository.UpdateAsync(customerExisting);
-            return result;
+                if (customerUpdate.idGoal != null && customerUpdate.idGoal.Any())
+                {
+                    await _customerRepository.DeleteGoalsAsync(customerExisting.id);
+                    foreach (var goalId in customerUpdate.idGoal)
+                    {
+                        var idGoal = await _goalRepository.AddCustomerGoalAsync(new CustomerGoal { customerid = customerExisting.id, goalid = goalId });
+                        if (idGoal <= 0) throw new InvalidOperationException("No se pudo guardar el objetivo del cliente.");
+                    }
+                }
+
+                if (customerUpdate.Memberships != null && customerUpdate.Memberships.Any())
+                {
+                    await _customerMembershipRepository.DeleteByCustomerIdAsync(customerExisting.id);
+                    foreach (var m in customerUpdate.Memberships)
+                    {
+                        var idMembership = await _customerMembershipRepository.AddAsync(new CustomerMembership
+                        {
+                            customerid = customerExisting.id,
+                            membershipid = m.IdMembership,
+                            startdate = m.StartDate,
+                            enddate = m.EndDate
+                        });
+                        if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membresía del cliente.");
+                    }
+                }
+
+                if (customerUpdate.CustomerClasses != null && customerUpdate.CustomerClasses.Any())
+                {
+                    await _customerRepository.DeleteClassesAsync(customerExisting.id);
+                    foreach (var classId in customerUpdate.CustomerClasses)
+                    {
+                        var idClass = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
+                        if (idClass <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
+                    }
+                }
+
+                transaction.Commit();
+                return true;
+            }
+            catch (Exception)
+            {
+                transaction.Rollback();
+                throw;
+            }
         }
 
         public async Task<bool> AddAbsenceAsync(int customerId, AddCustomerAbsenceRequestDto absence)

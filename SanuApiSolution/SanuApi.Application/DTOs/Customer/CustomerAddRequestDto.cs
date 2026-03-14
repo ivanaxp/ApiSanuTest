@@ -64,20 +64,20 @@ namespace SanuApi.Application.DTOs.Customer
         /// </summary>
         /// 
         [SwaggerSchema("Corresponde a los datos de salud del cliente.")]
-        public required HealthCustomerDto Health { get; set; }
+        public HealthCustomerDto? Health { get; set; }
 
         /// <summary>
         /// Corresponde a las membresias del cliente.
         /// </summary>
-        /// 
+        ///
         [SwaggerSchema("Corresponde a los ids de los ojetivos seleccionado.")]
-        public List<CustomerMemberShipRequestDto> Memberships { get; set; }
+        public required List<CustomerMemberShipRequestDto> Memberships { get; set; }
 
         /// <summary>
         /// Corresponde a las clases del cliente.
         /// </summary>
-        /// 
+        ///
         [SwaggerSchema("Corresponde a los ids de las clases seleccionadas.")]
-        public List<int> CustomerClasses { get; set; }
+        public required List<int> CustomerClasses { get; set; }
     }
 }
