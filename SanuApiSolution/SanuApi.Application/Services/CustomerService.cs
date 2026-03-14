@@ -58,7 +58,7 @@ namespace SanuApi.Aplication.Services
                         startdate = item.StartDate,
                         enddate = item.EndDate
                     });
-                    if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membresía del cliente.");
+                    if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membresï¿½a del cliente.");
                 }            
 
             return true;
@@ -99,7 +99,7 @@ namespace SanuApi.Aplication.Services
                         medicalCondicion = customer.Health.MedicalCondicion
                     };
                     var idHealth = await _healthCustomerRepository.AddAsync(healthCustomer);
-                    if (idHealth <= 0) throw new InvalidOperationException("No se pudo guardar la condición médica del cliente.");
+                    if (idHealth <= 0) throw new InvalidOperationException("No se pudo guardar la condiciï¿½n mï¿½dica del cliente.");
 
                 }
                 if (customer.idGoal.Any())
@@ -128,7 +128,7 @@ namespace SanuApi.Aplication.Services
                             startdate = item.StartDate,
                             enddate = item.EndDate
                         });
-                        if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membresía del cliente.");
+                        if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membresï¿½a del cliente.");
                     }
                 }
                 if (customer.CustomerClasses.Any())
@@ -165,6 +165,8 @@ namespace SanuApi.Aplication.Services
             var c = await _customerRepository.FindByIdAsync(id);
             if (c == null)
                 return null;
+
+            var classes = await _customerRepository.GetClassesAsync(id);
 
             return new CutsomerFindByIdResponseDto
             {
@@ -203,6 +205,15 @@ namespace SanuApi.Aplication.Services
                     MedicalCondicion = c.healthCustomer?.medicalCondicion,
                     Weight = c.healthCustomer.weight
                 },
+                Classes = classes.Select(cl => new ClassCustomerResponseDto
+                {
+                    ClassId = cl.id,
+                    CustomerId = id,
+                    Name = cl.name,
+                    Day = cl.day,
+                    Hour = cl.hour,
+                    Capacity = cl.capacity
+                }).ToList()
             };
 
         }
@@ -247,7 +258,7 @@ namespace SanuApi.Aplication.Services
         public async Task<bool> UpdateAsync(CustomerUpdateRequestDto customerUpdate)
         {
             var customerExisting = await this._customerRepository.FindByIdAsync(customerUpdate.IdCustomer);
-            if (customerExisting == null) throw new InvalidOperationException("No se encontró el cliente");
+            if (customerExisting == null) throw new InvalidOperationException("No se encontrï¿½ el cliente");
 
             if (!string.IsNullOrWhiteSpace(customerUpdate.CustomerName))
                 customerExisting.customername = customerUpdate.CustomerName;

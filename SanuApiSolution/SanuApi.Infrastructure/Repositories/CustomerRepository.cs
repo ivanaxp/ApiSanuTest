@@ -1,4 +1,4 @@
-using Dapper;
+ï»¿using Dapper;
 using Dapper.Contrib.Extensions;
 using SanuApi.Domain.Entities;
 using SanuApi.Domain.Interfaces;
@@ -55,7 +55,7 @@ namespace SanuApi.Infrastructure.Repositories
                 sql,
                 (customer, customerGoal, goal, health, customerMembership, membership) =>
                 {
-                    // agrupación por customer.id
+                    // agrupaciï¿½n por customer.id
                     if (!customersDictionary.TryGetValue(customer.id, out var currentCustomer))
                     {
                         currentCustomer = customer;
@@ -92,42 +92,40 @@ namespace SanuApi.Infrastructure.Repositories
         }
         public async Task<Customer?> FindByIdAsync(int id)
         {
+            // Bug fixes:
+            // 1. hc.height AS heigth: "height" en DB no mapea a propiedad "heigth" (typo en entidad)
+            // 2. splitOn usaba "name" que disparaba el split en m.name (Membership) antes de cl.name (Classes)
+            // 3. Se elimina el JOIN de classes (FindByIdAsync no lo expone en el DTO de respuesta)
             var sql = "SELECT c.id, c.customername, c.customerlastname, c.datebirth," +
                  "c.dni, c.celphone, c.address, c.comentaries, c.ismale, c.fechaalta, c.fechabaja, " +
                  "cg.goalid, g.goalname, g.id, " +
-                 "hc.height, hc.weight, hc.alergics, hc.medicalcondicion," +
-                 "cm.membershipid,cm.startdate, cm.enddate , m.id, m.name, " +
-                 "cc.classid,cl.name " +
+                 "hc.height AS heigth, hc.weight, hc.alergics, hc.medicalcondicion," +
+                 "cm.membershipid, cm.startdate, cm.enddate, m.id, m.name " +
                  "FROM customer c " +
-                 "LEFT JOIN customer_x_goal cg  ON cg.customerid = c.id " +
-                 "LEFT JOIN customer_x_membership cm ON cm.customerid= c.id " +
-                 "LEFT JOIN goal g ON cg.goalid= g.id " +
-                 "LEFT JOIN healthcustomer hc ON hc.customerid= c.id " +
+                 "LEFT JOIN customer_x_goal cg ON cg.customerid = c.id " +
+                 "LEFT JOIN customer_x_membership cm ON cm.customerid = c.id " +
+                 "LEFT JOIN goal g ON cg.goalid = g.id " +
+                 "LEFT JOIN healthcustomer hc ON hc.customerid = c.id " +
                  "LEFT JOIN membership m ON m.id = cm.membershipid " +
-                 "LEFT JOIN class_x_customer cc ON cc.customerid = c.id " +
-                 "LEFT JOIN classes cl ON cc.classid = cl.id " +
-            "WHERE  c.id = @CustomerId " +
-            "ORDER BY g.id, cm.membershipid;";
+                 "WHERE c.id = @CustomerId " +
+                 "ORDER BY g.id, cm.membershipid;";
 
             if (_db.State != ConnectionState.Open)
                 _db.Open();
 
             Customer? resultCustomer = null;
 
-            await _db.QueryAsync<Customer, CustomerGoal, Goal, HealthCustomer, CustomerMembership, Membership, Classes, Customer>(
+            await _db.QueryAsync<Customer, CustomerGoal, Goal, HealthCustomer, CustomerMembership, Membership, Customer>(
                 sql,
-                (customer, customerGoal, goal, health, customerMembership, membership, classes) =>
+                (customer, customerGoal, goal, health, customerMembership, membership) =>
                 {
-
                     if (resultCustomer == null)
                     {
                         resultCustomer = customer;
-
                         resultCustomer.customerGoals ??= new List<CustomerGoal>();
                         resultCustomer.customerMembership ??= new List<CustomerMembership>();
                         resultCustomer.healthCustomer = health ?? new HealthCustomer();
                     }
-
 
                     if (goal != null && goal.id != 0 && !resultCustomer.customerGoals.Any(g => g.goalid == goal.id))
                     {
@@ -135,37 +133,19 @@ namespace SanuApi.Infrastructure.Repositories
                         resultCustomer.customerGoals.Add(customerGoal);
                     }
 
-
-                    if (membership != null)
+                    if (membership != null && membership.id != 0 &&
+                        !resultCustomer.customerMembership.Any(m => m.membershipid == customerMembership.membershipid))
                     {
                         customerMembership.Membership = membership;
                         resultCustomer.customerMembership.Add(customerMembership);
-                    }
-                    if (classes != null && classes.id != 0)
-                    {
-                        resultCustomer.classesCustomer = new ClassCustomer
-                        {
-
-                            classid = classes.id,
-                            customerid = resultCustomer.id,
-                            classesName = new Classes
-                            {
-                                id = classes.id,
-                                name = classes.name,
-                                day = classes.day,
-                                hour = classes.hour,
-                                capacity = classes.capacity
-                            }
-                        };
                     }
 
                     return resultCustomer;
                 },
                 new { CustomerId = id },
-                splitOn: "goalid,goalname, height, membershipid, id, name"
+                splitOn: "goalid,goalname,heigth,membershipid,id"
             );
 
-            // 3. Retornar el cliente único
             return resultCustomer;
         }
         public async Task<int> AddAsync(Customer entity)
