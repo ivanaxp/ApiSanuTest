@@ -52,6 +52,28 @@ namespace SanuApi.Application.Services
             });
         }
 
+        public async Task<ClassWithCustomersResponseDto?> GetWithCustomersAsync(int classId)
+        {
+            var (clase, customers) = await _classRepository.GetWithCustomersAsync(classId);
+            if (clase == null) return null;
+
+            return new ClassWithCustomersResponseDto
+            {
+                ClassId = clase.id,
+                ClassName = clase.name,
+                Day = clase.day,
+                Hour = clase.hour,
+                Capacity = clase.capacity,
+                Customers = customers.Select(c => new CustomerInClassDto
+                {
+                    CustomerId = c.id,
+                    CustomerName = c.customername,
+                    CustomerLastName = c.customerlastname,
+                    Celphone = c.celphone
+                }).ToList()
+            };
+        }
+
         public async Task<IEnumerable<ClassFindResponseDto>> GetAllAsync()
         {
             var classes = await _classRepository.GetAllAsync();

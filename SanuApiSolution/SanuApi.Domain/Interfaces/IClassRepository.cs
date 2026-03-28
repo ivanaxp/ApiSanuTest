@@ -1,5 +1,4 @@
-﻿
-using SanuApi.Domain.Entities;
+﻿using SanuApi.Domain.Entities;
 
 namespace SanuApi.Domain.Interfaces
 {
@@ -7,6 +6,7 @@ namespace SanuApi.Domain.Interfaces
     {
         Task<IEnumerable<Classes>> GetAllAsync();
         Task<Classes?> FindByIdAsync(int id);
+        Task<(Classes? Class, IEnumerable<Customer> Customers)> GetWithCustomersAsync(int classId);
         Task<int> AddAsync(Classes entity);
         Task<int> AddCustomerClassesAsync(ClassCustomer entity);
         Task<bool> DeleteAsync(Classes entity);

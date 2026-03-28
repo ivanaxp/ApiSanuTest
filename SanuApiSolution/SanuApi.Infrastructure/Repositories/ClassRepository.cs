@@ -61,6 +61,38 @@ namespace SanuApi.Infrastructure.Repositories
             return classes;
         }
 
+        public async Task<(Classes? Class, IEnumerable<Customer> Customers)> GetWithCustomersAsync(int classId)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = @"
+                SELECT cl.id, cl.name, cl.day, cl.hour, cl.capacity,
+                       c.id, c.customername, c.customerlastname, c.celphone
+                FROM classes cl
+                INNER JOIN class_x_customer cxc ON cl.id = cxc.classid
+                INNER JOIN customer c ON c.id = cxc.customerid
+                WHERE cl.id = @ClassId
+                AND c.fechabaja IS NULL";
+
+            Classes? resultClass = null;
+            var customers = new List<Customer>();
+
+            await _db.QueryAsync<Classes, Customer, Classes>(
+                sql,
+                (clase, customer) =>
+                {
+                    resultClass ??= clase;
+                    customers.Add(customer);
+                    return clase;
+                },
+                new { ClassId = classId },
+                splitOn: "id"
+            );
+
+            return (resultClass, customers);
+        }
+
         public async Task<IEnumerable<Classes>> GetAllAsync()
         {
             if (_db.State != ConnectionState.Open)

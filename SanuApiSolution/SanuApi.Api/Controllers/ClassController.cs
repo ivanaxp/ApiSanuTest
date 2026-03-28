@@ -28,9 +28,9 @@ namespace SanuApi.Api.Controllers
 
 
         [HttpGet("{id}")]
-        [SwaggerOperation(Summary = "Obtiene un producto por ID", Description = "Devuelve una clase específico si existe")]
+        [SwaggerOperation(Summary = "Obtiene un producto por ID", Description = "Devuelve una clase especï¿½fico si existe")]
         [SwaggerResponse(200, "Clase encontrado", typeof(ClassFindByIdResponseDto))]
-        [SwaggerResponse(404, "No se encontró la clase")]
+        [SwaggerResponse(404, "No se encontrï¿½ la clase")]
         public async Task<ActionResult<ClassFindResponseDto>> GetById(int id)
         {
             var clase = await _classlService.FindByIdAsync(id);
@@ -38,10 +38,21 @@ namespace SanuApi.Api.Controllers
             return Ok(clase);
         }
 
+        [HttpGet("{id}/customers")]
+        [SwaggerOperation(Summary = "Obtiene los clientes de una clase", Description = "Devuelve la clase con el listado de clientes activos inscriptos")]
+        [SwaggerResponse(200, "Clase con clientes", typeof(ClassWithCustomersResponseDto))]
+        [SwaggerResponse(404, "No se encontrÃ³ la clase")]
+        public async Task<ActionResult<ClassWithCustomersResponseDto>> GetWithCustomers(int id)
+        {
+            var result = await _classlService.GetWithCustomersAsync(id);
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
+
         [HttpPost]
         [SwaggerOperation(Summary = "Crea un nuevo objetivo", Description = "Inserta un nuevo objetivo en la base de datos")]
         [SwaggerResponse(201, "Objetivo creado correctamente", typeof(int))]
-        [SwaggerResponse(400, "Datos inválidos")]
+        [SwaggerResponse(400, "Datos invï¿½lidos")]
         public async Task<ActionResult<int>> Create([FromBody] AddClassRequestDto dto)
         {
             var clase = await _classlService.AddAsync(dto);
@@ -52,7 +63,7 @@ namespace SanuApi.Api.Controllers
         [HttpDelete("{id}")]
         [SwaggerOperation(Summary = "Elimina un objetivo", Description = "Elimina un objetivo en la base de datos")]
         [SwaggerResponse(201, "Objetivo creado correctamente", typeof(bool))]
-        [SwaggerResponse(400, "Datos inválidos")]
+        [SwaggerResponse(400, "Datos invï¿½lidos")]
         public async Task<ActionResult<int>> Delete(int id)
         {
             var clase = await _classlService.DeleteAsync(id);
