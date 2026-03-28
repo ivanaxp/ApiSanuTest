@@ -207,6 +207,32 @@ namespace SanuApi.Infrastructure.Repositories
             return affectedRows > 0;
         }
 
+        public async Task UpsertGoalAsync(CustomerGoal entity)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            var sql = @"INSERT INTO customer_x_goal (customerid, goalid)
+                        SELECT @CustomerId, @GoalId
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM customer_x_goal
+                            WHERE customerid = @CustomerId AND goalid = @GoalId
+                        )";
+            await _db.ExecuteAsync(sql, new { CustomerId = entity.customerid, GoalId = entity.goalid });
+        }
+
+        public async Task UpsertClassAsync(ClassCustomer entity)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            var sql = @"INSERT INTO class_x_customer (customerid, classid)
+                        SELECT @CustomerId, @ClassId
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM class_x_customer
+                            WHERE customerid = @CustomerId AND classid = @ClassId
+                        )";
+            await _db.ExecuteAsync(sql, new { CustomerId = entity.customerid, ClassId = entity.classid });
+        }
+
         public async Task<bool> DeleteClassesAsync(int customerId)
         {
             if (_db.State != ConnectionState.Open)

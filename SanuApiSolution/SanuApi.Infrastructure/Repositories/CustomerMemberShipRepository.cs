@@ -31,6 +31,30 @@ namespace SanuApi.Infrastructure.Repositories
             }
         }
 
+        public async Task UpsertAsync(CustomerMembership entity)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+            var sql = @"
+                UPDATE customer_x_membership
+                SET startdate = @StartDate, enddate = @EndDate
+                WHERE customerid = @CustomerId AND membershipid = @MembershipId;
+
+                INSERT INTO customer_x_membership (customerid, membershipid, startdate, enddate)
+                SELECT @CustomerId, @MembershipId, @StartDate, @EndDate
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM customer_x_membership
+                    WHERE customerid = @CustomerId AND membershipid = @MembershipId
+                );";
+            await _db.ExecuteAsync(sql, new
+            {
+                CustomerId = entity.customerid,
+                MembershipId = entity.membershipid,
+                StartDate = entity.startdate,
+                EndDate = entity.enddate
+            });
+        }
+
         public async Task<bool> DeleteByCustomerIdAsync(int customerId)
         {
             if (_db.State != ConnectionState.Open)

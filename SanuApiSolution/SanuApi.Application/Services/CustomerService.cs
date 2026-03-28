@@ -311,38 +311,26 @@ namespace SanuApi.Aplication.Services
 
                 if (customerUpdate.idGoal != null && customerUpdate.idGoal.Any())
                 {
-                    await _customerRepository.DeleteGoalsAsync(customerExisting.id);
                     foreach (var goalId in customerUpdate.idGoal)
-                    {
-                        var idGoal = await _goalRepository.AddCustomerGoalAsync(new CustomerGoal { customerid = customerExisting.id, goalid = goalId });
-                        if (idGoal <= 0) throw new InvalidOperationException("No se pudo guardar el objetivo del cliente.");
-                    }
+                        await _customerRepository.UpsertGoalAsync(new CustomerGoal { customerid = customerExisting.id, goalid = goalId });
                 }
 
                 if (customerUpdate.Memberships != null && customerUpdate.Memberships.Any())
                 {
-                    await _customerMembershipRepository.DeleteByCustomerIdAsync(customerExisting.id);
                     foreach (var m in customerUpdate.Memberships)
-                    {
-                        var idMembership = await _customerMembershipRepository.AddAsync(new CustomerMembership
+                        await _customerMembershipRepository.UpsertAsync(new CustomerMembership
                         {
                             customerid = customerExisting.id,
                             membershipid = m.IdMembership,
                             startdate = m.StartDate,
                             enddate = m.EndDate
                         });
-                        if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membresía del cliente.");
-                    }
                 }
 
                 if (customerUpdate.CustomerClasses != null && customerUpdate.CustomerClasses.Any())
                 {
-                    await _customerRepository.DeleteClassesAsync(customerExisting.id);
                     foreach (var classId in customerUpdate.CustomerClasses)
-                    {
-                        var idClass = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
-                        if (idClass <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
-                    }
+                        await _customerRepository.UpsertClassAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
                 }
 
                 transaction.Commit();
