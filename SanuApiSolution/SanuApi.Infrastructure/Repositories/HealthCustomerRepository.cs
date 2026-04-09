@@ -53,21 +53,20 @@ namespace SanuApi.Infrastructure.Repositories
 
         public async Task<bool> UpsertAsync(HealthCustomer entity)
         {
-            var sql = @"
-        INSERT INTO healthcustomer (customerid, height, weight, alergics, medicalCondicion)
-        VALUES (@CustomerId, @Height, @Weight, @Alergics, @MedicalCondicion)
-        ON CONFLICT (customerid) DO UPDATE SET
-            height          = EXCLUDED.height,
-            weight          = EXCLUDED.weight,
-            alergics        = EXCLUDED.alergics,
-            medicalCondicion = EXCLUDED.medicalCondicion;";
-
             try
             {
                 if (_db.State != ConnectionState.Open)
                     _db.Open();
 
-                var rows = await _db.ExecuteAsync(sql, new
+                var updateSql = @"
+        UPDATE healthcustomer SET
+            height           = @Height,
+            weight           = @Weight,
+            alergics         = @Alergics,
+            medicalCondicion = @MedicalCondicion
+        WHERE customerid = @CustomerId;";
+
+                var rows = await _db.ExecuteAsync(updateSql, new
                 {
                     CustomerId = entity.customerid,
                     Height = entity.heigth,
@@ -76,11 +75,27 @@ namespace SanuApi.Infrastructure.Repositories
                     MedicalCondicion = entity.medicalCondicion
                 });
 
+                if (rows == 0)
+                {
+                    var insertSql = @"
+        INSERT INTO healthcustomer (customerid, height, weight, alergics, medicalCondicion)
+        VALUES (@CustomerId, @Height, @Weight, @Alergics, @MedicalCondicion);";
+
+                    rows = await _db.ExecuteAsync(insertSql, new
+                    {
+                        CustomerId = entity.customerid,
+                        Height = entity.heigth,
+                        Weight = entity.weight,
+                        Alergics = entity.alergics,
+                        MedicalCondicion = entity.medicalCondicion
+                    });
+                }
+
                 return rows > 0;
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Error al actualizar la condición médica: {e.Message}", e);
+                throw new InvalidOperationException($"Error al actualizar la condicion medica: {e.Message}", e);
             }
         }
     }
