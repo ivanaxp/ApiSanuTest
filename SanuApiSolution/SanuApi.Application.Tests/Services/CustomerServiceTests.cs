@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using SanuApi.Aplication.Services;
@@ -37,7 +38,8 @@ public class CustomerServiceTests
             _healthRepoMock.Object,
             _goalRepoMock.Object,
             _membershipRepoMock.Object,
-            _dbMock.Object
+            _dbMock.Object,
+            new Mock<ILogger<CustomerService>>().Object
         );
     }
 

@@ -11,10 +11,12 @@ namespace SanuApi.Api.Controllers
     public class CustomerController : ControllerBase
     {
         private readonly ICustomerService _customerService;
+        private readonly ILogger<CustomerController> _logger;
 
-        public CustomerController(ICustomerService productAppService)
+        public CustomerController(ICustomerService productAppService, ILogger<CustomerController> logger)
         {
             _customerService = productAppService;
+            _logger = logger;
         }
 
 
@@ -29,9 +31,9 @@ namespace SanuApi.Api.Controllers
 
 
         [HttpGet("{id}")]
-        [SwaggerOperation(Summary = "Obtiene un customer por ID", Description = "Devuelve un customer específico si existe")]
+        [SwaggerOperation(Summary = "Obtiene un customer por ID", Description = "Devuelve un customer especifico si existe")]
         [SwaggerResponse(200, "Customer encontrado", typeof(CutsomerFindByIdResponseDto))]
-        [SwaggerResponse(404, "No se encontró el cliente")]
+        [SwaggerResponse(404, "No se encontro el cliente")]
         public async Task<ActionResult<CutsomerFindByIdResponseDto>> GetById(int id)
         {
             var coustomer = await _customerService.FindByIdAsync(id);
@@ -43,7 +45,7 @@ namespace SanuApi.Api.Controllers
         [HttpPost]
         [SwaggerOperation(Summary = "Crea un nuevo cliente", Description = "Inserta un nuevo cliente en la base de datos")]
         [SwaggerResponse(201, "Cliente creado correctamente", typeof(int))]
-        [SwaggerResponse(400, "Datos inválidos")]
+        [SwaggerResponse(400, "Datos invalidos")]
         public async Task<ActionResult<int>> Create([FromBody] CustomerAddRequestDto dto)
         {
             try
@@ -61,18 +63,26 @@ namespace SanuApi.Api.Controllers
         [HttpPut("{id}")]
         [SwaggerOperation(Summary = "Actualiza un Cliente existente", Description = "Modifica los datos de un cliente por su ID")]
         [SwaggerResponse(200, "Cliente actualizado correctamente", typeof(bool))]
-        [SwaggerResponse(404, "No se encontro el producto")]
+        [SwaggerResponse(404, "No se encontro el cliente")]
         public async Task<ActionResult<bool>> Update([FromBody] CustomerUpdateRequestDto dto)
         {
+            _logger.LogInformation("[CustomerController.Update] Iniciando actualizacion para IdCustomer={IdCustomer}", dto?.IdCustomer);
             try
             {
                 var customerUpdate = await _customerService.UpdateAsync(dto);
-                if (!customerUpdate) return NotFound();
+                if (!customerUpdate)
+                {
+                    _logger.LogWarning("[CustomerController.Update] Cliente no encontrado. IdCustomer={IdCustomer}", dto?.IdCustomer);
+                    return NotFound();
+                }
+                _logger.LogInformation("[CustomerController.Update] Actualizacion exitosa. IdCustomer={IdCustomer}", dto?.IdCustomer);
                 return Ok(customerUpdate);
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("No se encontró"))
+            catch (Exception ex)
             {
-                return NotFound(ex.Message);
+                _logger.LogError(ex, "[CustomerController.Update] ERROR al actualizar cliente. IdCustomer={IdCustomer}. Mensaje: {Message}. InnerException: {Inner}",
+                    dto?.IdCustomer, ex.Message, ex.InnerException?.Message);
+                return StatusCode(500, new { error = ex.Message, innerError = ex.InnerException?.Message });
             }
         }
 

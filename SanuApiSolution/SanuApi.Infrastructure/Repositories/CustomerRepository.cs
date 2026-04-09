@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Dapper.Contrib.Extensions;
+using Microsoft.Extensions.Logging;
 using SanuApi.Domain.Entities;
 using SanuApi.Domain.Interfaces;
 using System.Data;
@@ -10,9 +11,11 @@ namespace SanuApi.Infrastructure.Repositories
     public class CustomerRepository : ICustomerRepository
     {
         private readonly IDbConnection _db;
-        public CustomerRepository(IDbConnection db)
+        private readonly ILogger<CustomerRepository> _logger;
+        public CustomerRepository(IDbConnection db, ILogger<CustomerRepository> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<Customer>> GetAllAsync(bool? active)
@@ -92,6 +95,7 @@ namespace SanuApi.Infrastructure.Repositories
         }
         public async Task<Customer?> FindByIdAsync(int id)
         {
+            _logger.LogInformation("[CustomerRepository.FindByIdAsync] Buscando cliente Id={Id}", id);
             // Bug fixes:
             // 1. hc.height AS heigth: "height" en DB no mapea a propiedad "heigth" (typo en entidad)
             // 2. splitOn usaba "name" que disparaba el split en m.name (Membership) antes de cl.name (Classes)
@@ -113,38 +117,50 @@ namespace SanuApi.Infrastructure.Repositories
             if (_db.State != ConnectionState.Open)
                 _db.Open();
 
+            _logger.LogInformation("[CustomerRepository.FindByIdAsync] Ejecutando query para Id={Id}", id);
             Customer? resultCustomer = null;
 
-            await _db.QueryAsync<Customer, CustomerGoal, Goal, HealthCustomer, CustomerMembership, Membership, Customer>(
-                sql,
-                (customer, customerGoal, goal, health, customerMembership, membership) =>
-                {
-                    if (resultCustomer == null)
+            try
+            {
+                await _db.QueryAsync<Customer, CustomerGoal, Goal, HealthCustomer, CustomerMembership, Membership, Customer>(
+                    sql,
+                    (customer, customerGoal, goal, health, customerMembership, membership) =>
                     {
-                        resultCustomer = customer;
-                        resultCustomer.customerGoals ??= new List<CustomerGoal>();
-                        resultCustomer.customerMembership ??= new List<CustomerMembership>();
-                        resultCustomer.healthCustomer = health ?? new HealthCustomer();
-                    }
+                        if (resultCustomer == null)
+                        {
+                            resultCustomer = customer;
+                            resultCustomer.customerGoals ??= new List<CustomerGoal>();
+                            resultCustomer.customerMembership ??= new List<CustomerMembership>();
+                            resultCustomer.healthCustomer = health ?? new HealthCustomer();
+                        }
 
-                    if (goal != null && goal.id != 0 && !resultCustomer.customerGoals.Any(g => g.goalid == goal.id))
-                    {
-                        customerGoal.Goal = goal;
-                        resultCustomer.customerGoals.Add(customerGoal);
-                    }
+                        if (goal != null && goal.id != 0 && !resultCustomer.customerGoals.Any(g => g.goalid == goal.id))
+                        {
+                            customerGoal.Goal = goal;
+                            resultCustomer.customerGoals.Add(customerGoal);
+                        }
 
-                    if (membership != null && membership.id != 0 &&
-                        !resultCustomer.customerMembership.Any(m => m.membershipid == customerMembership.membershipid))
-                    {
-                        customerMembership.Membership = membership;
-                        resultCustomer.customerMembership.Add(customerMembership);
-                    }
+                        if (membership != null && membership.id != 0 &&
+                            !resultCustomer.customerMembership.Any(m => m.membershipid == customerMembership.membershipid))
+                        {
+                            customerMembership.Membership = membership;
+                            resultCustomer.customerMembership.Add(customerMembership);
+                        }
 
-                    return resultCustomer;
-                },
-                new { CustomerId = id },
-                splitOn: "goalid,goalname,heigth,membershipid,id"
-            );
+                        return resultCustomer;
+                    },
+                    new { CustomerId = id },
+                    splitOn: "goalid,goalname,heigth,membershipid,id"
+                );
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "[CustomerRepository.FindByIdAsync] ERROR en query. Id={Id}. Mensaje: {Message}. InnerException: {Inner}",
+                    id, e.Message, e.InnerException?.Message);
+                throw;
+            }
+
+            _logger.LogInformation("[CustomerRepository.FindByIdAsync] Resultado: {Found}", resultCustomer != null ? "Encontrado" : "No encontrado");
 
             return resultCustomer;
         }
@@ -265,10 +281,13 @@ namespace SanuApi.Infrastructure.Repositories
 
         public async Task<bool> UpdateAsync(Customer entity)
         {
+            _logger.LogInformation("[CustomerRepository.UpdateAsync] Iniciando UPDATE para Id={Id}", entity.id);
             try
             {
                 if (_db.State != ConnectionState.Open)
                     _db.Open();
+
+                _logger.LogInformation("[CustomerRepository.UpdateAsync] Conexion abierta. Estado={State}", _db.State);
 
                 var sql = @"
                         UPDATE public.customer
@@ -286,6 +305,9 @@ namespace SanuApi.Infrastructure.Repositories
                         WHERE id = @Id;
                         ";
 
+                _logger.LogInformation("[CustomerRepository.UpdateAsync] Ejecutando SQL UPDATE. Params: Id={Id}, Name={Name}, LastName={LastName}, DateBirth={DateBirth}, Dni={Dni}",
+                    entity.id, entity.customername, entity.customerlastname, entity.datebirth, entity.dni);
+
                 var rowsAffected = await _db.ExecuteAsync(sql, new
                 {
                     Id = entity.id,
@@ -301,10 +323,13 @@ namespace SanuApi.Infrastructure.Repositories
                     FechaAlta = entity.fechaalta
                 });
 
+                _logger.LogInformation("[CustomerRepository.UpdateAsync] Filas afectadas={RowsAffected}", rowsAffected);
                 return rowsAffected > 0;
             }
             catch (Exception e)
             {
+                _logger.LogError(e, "[CustomerRepository.UpdateAsync] ERROR al ejecutar UPDATE. Id={Id}. Mensaje: {Message}. InnerException: {Inner}",
+                    entity.id, e.Message, e.InnerException?.Message);
                 throw new InvalidOperationException("Error al actualizar el cliente", e);
             }
         }

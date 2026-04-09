@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SanuApi.Application.DTOs.Customer;
 using SanuApi.Application.DTOs.Goal;
 using SanuApi.Domain.Entities;
@@ -14,13 +15,15 @@ namespace SanuApi.Aplication.Services
         private readonly IGoalRepository _goalRepository;
         private readonly ICustomerMembershipRepository _customerMembershipRepository;
         private readonly IDbConnection _db;
-        public CustomerService(ICustomerRepository customerRepository, IHealthCustomerRepository healthCustomerRepository, IGoalRepository goalRepository, ICustomerMembershipRepository customerMembershipRepository, IDbConnection db)
+        private readonly ILogger<CustomerService> _logger;
+        public CustomerService(ICustomerRepository customerRepository, IHealthCustomerRepository healthCustomerRepository, IGoalRepository goalRepository, ICustomerMembershipRepository customerMembershipRepository, IDbConnection db, ILogger<CustomerService> logger)
         {
             _customerRepository = customerRepository;
             _healthCustomerRepository = healthCustomerRepository;
             _goalRepository = goalRepository;
             _customerMembershipRepository = customerMembershipRepository;
             _db = db;
+            _logger = logger;
         }
         public async Task<bool> AddClassesAsync(int customerId, AddCustomerClassRequestDto classCustomer)
         {
@@ -48,7 +51,7 @@ namespace SanuApi.Aplication.Services
             if (membershipCustomer.MembershipIds == null || !membershipCustomer.MembershipIds.Any())
                 return false;
 
-            
+
                 foreach (var item in membershipCustomer.MembershipIds)
                 {
                     var idMembership = await _customerMembershipRepository.AddAsync(new CustomerMembership
@@ -59,7 +62,7 @@ namespace SanuApi.Aplication.Services
                         enddate = item.EndDate
                     });
                     if (idMembership <= 0) throw new InvalidOperationException("No se pudo guardar la membres�a del cliente.");
-                }            
+                }
 
             return true;
         }
@@ -68,7 +71,7 @@ namespace SanuApi.Aplication.Services
         public async Task<int> AddAsync(CustomerAddRequestDto customer)
         {
             if (!customer.Memberships.Any())
-                throw new ArgumentException("Debe especificar al menos una membresía.");
+                throw new ArgumentException("Debe especificar al menos una members�a.");
             if (!customer.CustomerClasses.Any())
                 throw new ArgumentException("Debe especificar al menos una clase.");
 
@@ -262,8 +265,15 @@ namespace SanuApi.Aplication.Services
 
         public async Task<bool> UpdateAsync(CustomerUpdateRequestDto customerUpdate)
         {
+            _logger.LogInformation("[CustomerService.UpdateAsync] Buscando cliente IdCustomer={IdCustomer}", customerUpdate.IdCustomer);
             var customerExisting = await this._customerRepository.FindByIdAsync(customerUpdate.IdCustomer);
-            if (customerExisting == null) throw new InvalidOperationException("No se encontró el cliente");
+            if (customerExisting == null)
+            {
+                _logger.LogWarning("[CustomerService.UpdateAsync] Cliente no encontrado. IdCustomer={IdCustomer}", customerUpdate.IdCustomer);
+                throw new InvalidOperationException("No se encontro el cliente");
+            }
+
+            _logger.LogInformation("[CustomerService.UpdateAsync] Cliente encontrado. Aplicando cambios en campos basicos...");
 
             if (!string.IsNullOrWhiteSpace(customerUpdate.CustomerName))
                 customerExisting.customername = customerUpdate.CustomerName;
@@ -291,14 +301,19 @@ namespace SanuApi.Aplication.Services
 
             if (_db.State != ConnectionState.Open)
                 _db.Open();
+            _logger.LogInformation("[CustomerService.UpdateAsync] Iniciando transaccion...");
             using var transaction = _db.BeginTransaction();
             try
             {
+                _logger.LogInformation("[CustomerService.UpdateAsync] Llamando CustomerRepository.UpdateAsync...");
                 var result = await _customerRepository.UpdateAsync(customerExisting);
                 if (!result) throw new InvalidOperationException("No se pudo actualizar el cliente.");
+                _logger.LogInformation("[CustomerService.UpdateAsync] UPDATE customer OK.");
 
                 if (customerUpdate.Health != null)
                 {
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert HealthCustomer. Height={Height}, Weight={Weight}",
+                        customerUpdate.Health.Height, customerUpdate.Health.Weight);
                     await _healthCustomerRepository.UpsertAsync(new HealthCustomer
                     {
                         customerid = customerExisting.id,
@@ -307,16 +322,20 @@ namespace SanuApi.Aplication.Services
                         alergics = customerUpdate.Health.Alergics,
                         medicalCondicion = customerUpdate.Health.MedicalCondicion
                     });
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert HealthCustomer OK.");
                 }
 
                 if (customerUpdate.idGoal != null && customerUpdate.idGoal.Any())
                 {
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert Goals: {Goals}", string.Join(",", customerUpdate.idGoal));
                     foreach (var goalId in customerUpdate.idGoal)
                         await _customerRepository.UpsertGoalAsync(new CustomerGoal { customerid = customerExisting.id, goalid = goalId });
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert Goals OK.");
                 }
 
                 if (customerUpdate.Memberships != null && customerUpdate.Memberships.Any())
                 {
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert Memberships: {Count} item(s)", customerUpdate.Memberships.Count());
                     foreach (var m in customerUpdate.Memberships)
                         await _customerMembershipRepository.UpsertAsync(new CustomerMembership
                         {
@@ -325,19 +344,25 @@ namespace SanuApi.Aplication.Services
                             startdate = m.StartDate,
                             enddate = m.EndDate
                         });
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert Memberships OK.");
                 }
 
                 if (customerUpdate.CustomerClasses != null && customerUpdate.CustomerClasses.Any())
                 {
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert CustomerClasses: {Classes}", string.Join(",", customerUpdate.CustomerClasses));
                     foreach (var classId in customerUpdate.CustomerClasses)
                         await _customerRepository.UpsertClassAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert CustomerClasses OK.");
                 }
 
                 transaction.Commit();
+                _logger.LogInformation("[CustomerService.UpdateAsync] Transaccion committed. Exito.");
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "[CustomerService.UpdateAsync] ERROR en transaccion. Haciendo rollback. Mensaje: {Message}. InnerException: {Inner}",
+                    ex.Message, ex.InnerException?.Message);
                 transaction.Rollback();
                 throw;
             }
