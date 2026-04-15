@@ -347,12 +347,17 @@ namespace SanuApi.Aplication.Services
                     _logger.LogInformation("[CustomerService.UpdateAsync] Upsert Memberships OK.");
                 }
 
-                if (customerUpdate.CustomerClasses != null && customerUpdate.CustomerClasses.Any())
+                if (customerUpdate.CustomerClasses != null)
                 {
-                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert CustomerClasses: {Classes}", string.Join(",", customerUpdate.CustomerClasses));
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Eliminando clases existentes del cliente Id={Id}", customerExisting.id);
+                    await _customerRepository.DeleteClassesAsync(customerExisting.id);
+
                     foreach (var classId in customerUpdate.CustomerClasses)
-                        await _customerRepository.UpsertClassAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
-                    _logger.LogInformation("[CustomerService.UpdateAsync] Upsert CustomerClasses OK.");
+                    {
+                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
+                        if (idClassCustomer <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
+                    }
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Clases actualizadas: {Classes}", string.Join(",", customerUpdate.CustomerClasses));
                 }
 
                 transaction.Commit();

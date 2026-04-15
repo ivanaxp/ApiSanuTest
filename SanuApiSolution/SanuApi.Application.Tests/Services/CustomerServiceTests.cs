@@ -284,6 +284,88 @@ public class CustomerServiceTests
         Assert.ThrowsAsync<InvalidOperationException>(() => _service.UpdateAsync(dto));
     }
 
+    [Test]
+    public async Task UpdateAsync_WithClasses_DeletesAllThenInsertsNew()
+    {
+        var existing = new Customer
+        {
+            id = 1, customername = "Juan", customerlastname = "Perez",
+            fechaalta = DateTime.Now,
+            customerGoals = new List<CustomerGoal>(),
+            customerMembership = new List<CustomerMembership>(),
+            healthCustomer = new HealthCustomer()
+        };
+        var dto = new CustomerUpdateRequestDto
+        {
+            IdCustomer = 1,
+            CustomerClasses = new List<int> { 3, 4 }
+        };
+
+        _customerRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(existing);
+        _customerRepoMock.Setup(r => r.UpdateAsync(It.IsAny<Customer>())).ReturnsAsync(true);
+        _customerRepoMock.Setup(r => r.DeleteClassesAsync(1)).ReturnsAsync(true);
+        _customerRepoMock.Setup(r => r.AddClassesAsync(It.IsAny<ClassCustomer>())).ReturnsAsync(1);
+
+        await _service.UpdateAsync(dto);
+
+        _customerRepoMock.Verify(r => r.DeleteClassesAsync(1), Times.Once);
+        _customerRepoMock.Verify(r => r.AddClassesAsync(It.IsAny<ClassCustomer>()), Times.Exactly(2));
+    }
+
+    [Test]
+    public async Task UpdateAsync_WithEmptyClassList_DeletesAllAndInsertsNothing()
+    {
+        var existing = new Customer
+        {
+            id = 1, customername = "Juan", customerlastname = "Perez",
+            fechaalta = DateTime.Now,
+            customerGoals = new List<CustomerGoal>(),
+            customerMembership = new List<CustomerMembership>(),
+            healthCustomer = new HealthCustomer()
+        };
+        var dto = new CustomerUpdateRequestDto
+        {
+            IdCustomer = 1,
+            CustomerClasses = new List<int>()
+        };
+
+        _customerRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(existing);
+        _customerRepoMock.Setup(r => r.UpdateAsync(It.IsAny<Customer>())).ReturnsAsync(true);
+        _customerRepoMock.Setup(r => r.DeleteClassesAsync(1)).ReturnsAsync(true);
+
+        await _service.UpdateAsync(dto);
+
+        _customerRepoMock.Verify(r => r.DeleteClassesAsync(1), Times.Once);
+        _customerRepoMock.Verify(r => r.AddClassesAsync(It.IsAny<ClassCustomer>()), Times.Never);
+    }
+
+    [Test]
+    public async Task UpdateAsync_WithNullClasses_DoesNotTouchClasses()
+    {
+        var existing = new Customer
+        {
+            id = 1, customername = "Juan", customerlastname = "Perez",
+            fechaalta = DateTime.Now,
+            customerGoals = new List<CustomerGoal>(),
+            customerMembership = new List<CustomerMembership>(),
+            healthCustomer = new HealthCustomer()
+        };
+        var dto = new CustomerUpdateRequestDto
+        {
+            IdCustomer = 1,
+            CustomerName = "Carlos",
+            CustomerClasses = null
+        };
+
+        _customerRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(existing);
+        _customerRepoMock.Setup(r => r.UpdateAsync(It.IsAny<Customer>())).ReturnsAsync(true);
+
+        await _service.UpdateAsync(dto);
+
+        _customerRepoMock.Verify(r => r.DeleteClassesAsync(It.IsAny<int>()), Times.Never);
+        _customerRepoMock.Verify(r => r.AddClassesAsync(It.IsAny<ClassCustomer>()), Times.Never);
+    }
+
     // ─── DeleteAsync ──────────────────────────────────────────────────────────
 
     [Test]
