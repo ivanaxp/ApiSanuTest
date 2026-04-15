@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using SanuApi.Aplication.Services;
@@ -18,7 +19,7 @@ public class CustomerControllerTests
     public void SetUp()
     {
         _serviceMock = new Mock<ICustomerService>();
-        _controller = new CustomerController(_serviceMock.Object);
+        _controller = new CustomerController(_serviceMock.Object, Mock.Of<ILogger<CustomerController>>());
     }
 
     // ─── GetAll ────────────────────────────────────────────────────────────────

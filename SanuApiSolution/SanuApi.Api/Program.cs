@@ -26,6 +26,7 @@ else
 }
 
 // 🚀 Repositorios
+builder.Services.AddScoped<ITrainerRepository, TrainerRepository>();
 builder.Services.AddScoped<IGoalRepository, GoalRepository>();
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
@@ -34,6 +35,7 @@ builder.Services.AddScoped<ICustomerMembershipRepository, CustomerMemberShipRepo
 builder.Services.AddScoped<IHealthCustomerRepository, HealthCustomerRepository>(); 
 
 // 🚀 Servicios
+builder.Services.AddScoped<ITrainerService, TrainerService>();
 builder.Services.AddScoped<IGoalService, GoalService>();
 builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
