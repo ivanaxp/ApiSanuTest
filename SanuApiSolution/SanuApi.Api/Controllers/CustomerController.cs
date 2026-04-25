@@ -138,6 +138,15 @@ namespace SanuApi.Api.Controllers
             return Ok(true);
         }
 
+        [HttpGet("{customerId}/absences")]
+        [SwaggerOperation(Summary = "Obtiene las asistencias de un cliente", Description = "Devuelve el historial de asistencias del cliente ordenado por fecha descendente")]
+        [SwaggerResponse(200, "Listado de asistencias", typeof(IEnumerable<CustomerAbsenceResponseDto>))]
+        public async Task<ActionResult<IEnumerable<CustomerAbsenceResponseDto>>> GetAbsences(int customerId)
+        {
+            var absences = await _customerService.GetAbsencesAsync(customerId);
+            return Ok(absences);
+        }
+
         [HttpPost("{customerId}/absence")]
         [SwaggerOperation(Summary = "Agrega asistencia a un cliente", Description = "Atoma asistencia al cliente")]
         [SwaggerResponse(StatusCodes.Status204NoContent)]

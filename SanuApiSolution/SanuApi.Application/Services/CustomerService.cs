@@ -160,12 +160,12 @@ namespace SanuApi.Aplication.Services
             return idCustomer;
         }
 
-        public Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id)
         {
-            var customer = _customerRepository.FindByIdAsync(id);
-            if (customer == null) return Task.FromResult(false);
+            var customer = await _customerRepository.FindByIdAsync(id);
+            if (customer == null) return false;
 
-            return _customerRepository.DeleteAsync(id);
+            return await _customerRepository.DeleteAsync(id);
         }
 
         public async Task<CutsomerFindByIdResponseDto?> FindByIdAsync(int id)
@@ -375,9 +375,21 @@ namespace SanuApi.Aplication.Services
 
         public async Task<bool> AddAbsenceAsync(int customerId, AddCustomerAbsenceRequestDto absence)
         {
-
-            var result = await _customerRepository.AddAbsenceAsync(new Absences { classid= absence.IdClass, customerid= absence.IdCustomer, dateabsence= absence.DateAbsence});
+            var result = await _customerRepository.AddAbsenceAsync(new Absences { classid = absence.IdClass, customerid = absence.IdCustomer, dateabsence = absence.DateAbsence });
             return result > 0;
+        }
+
+        public async Task<IEnumerable<CustomerAbsenceResponseDto>> GetAbsencesAsync(int customerId)
+        {
+            var absences = await _customerRepository.GetAbsencesAsync(customerId);
+
+            return absences.Select(a => new CustomerAbsenceResponseDto
+            {
+                Id = a.Absence.id,
+                ClassId = a.Absence.classid,
+                ClassName = a.Class?.name,
+                DateAbsence = a.Absence.dateabsence
+            });
         }
     }
 }

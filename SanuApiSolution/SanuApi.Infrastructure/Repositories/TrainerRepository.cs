@@ -20,8 +20,8 @@ namespace SanuApi.Infrastructure.Repositories
                 _db.Open();
 
             var sql = @"
-                INSERT INTO trainer (name, lastName)
-                VALUES (@Name, @LastName)
+                INSERT INTO trainer (name, lastName, email, telephone)
+                VALUES (@Name, @LastName, @Email, @Telephone)
                 RETURNING id;";
 
             try
@@ -29,7 +29,9 @@ namespace SanuApi.Infrastructure.Repositories
                 var id = await _db.ExecuteScalarAsync<int>(sql, new
                 {
                     Name = entity.name,
-                    LastName = entity.lastName
+                    LastName = entity.lastName,
+                    Email = entity.email,
+                    Telephone = entity.telephone
                 });
                 return id;
             }
@@ -100,6 +102,48 @@ namespace SanuApi.Infrastructure.Repositories
 
             return classesDictionary.Values
                 .Select(e => (e.Class, (IEnumerable<Customer>)e.Students));
+        }
+
+        public async Task<Trainer?> FindByIdAsync(int id)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = "SELECT id, name, lastName, endDate FROM trainer WHERE id = @Id";
+            return await _db.QuerySingleOrDefaultAsync<Trainer>(sql, new { Id = id });
+        }
+
+        public async Task<bool> UpdateAsync(Trainer entity)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = @"UPDATE trainer
+                        SET name      = COALESCE(@Name, name),
+                            lastName  = COALESCE(@LastName, lastName),
+                            email     = COALESCE(@Email, email),
+                            telephone = COALESCE(@Telephone, telephone)
+                        WHERE id = @Id AND endDate IS NULL";
+
+            var rows = await _db.ExecuteAsync(sql, new
+            {
+                Name = entity.name,
+                LastName = entity.lastName,
+                Email = entity.email,
+                Telephone = entity.telephone,
+                Id = entity.id
+            });
+            return rows > 0;
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = "UPDATE trainer SET endDate = @EndDate WHERE id = @Id AND endDate IS NULL";
+            var rows = await _db.ExecuteAsync(sql, new { EndDate = DateTime.UtcNow, Id = id });
+            return rows > 0;
         }
     }
 }

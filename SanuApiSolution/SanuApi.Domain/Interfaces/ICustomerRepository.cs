@@ -15,5 +15,6 @@ namespace SanuApi.Domain.Interfaces {
         Task<bool> DeleteGoalsAsync(int customerId);
         Task<bool> UpdateAsync(Customer entity);
         Task<int> AddAbsenceAsync(Absences entity);
+        Task<IEnumerable<(Absences Absence, Classes Class)>> GetAbsencesAsync(int customerId);
     }
 }

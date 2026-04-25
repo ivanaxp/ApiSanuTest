@@ -11,5 +11,11 @@ namespace SanuApi.Domain.Entities
         public string name { get; set; }
 
         public string lastName { get; set; }
+
+        public string? email { get; set; }
+
+        public string? telephone { get; set; }
+
+        public DateTime? endDate { get; set; }
     }
 }

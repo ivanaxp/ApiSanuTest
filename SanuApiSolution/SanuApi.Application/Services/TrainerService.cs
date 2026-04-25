@@ -19,7 +19,9 @@ namespace SanuApi.Application.Services
             var trainer = new Trainer
             {
                 name = dto.TrainerName,
-                lastName = dto.TrainerLastName
+                lastName = dto.TrainerLastName,
+                email = dto.Email,
+                telephone = dto.Telephone
             };
             return await _trainerRepository.AddAsync(trainer);
         }
@@ -61,6 +63,34 @@ namespace SanuApi.Application.Services
                     CustomerLastName = s.customerlastname
                 }).ToList()
             });
+        }
+
+        public async Task<bool> UpdateAsync(int trainerId, TrainerUpdateRequestDto dto)
+        {
+            var trainer = await _trainerRepository.FindByIdAsync(trainerId);
+            if (trainer == null) return false;
+
+            if (!string.IsNullOrWhiteSpace(dto.TrainerName))
+                trainer.name = dto.TrainerName;
+
+            if (!string.IsNullOrWhiteSpace(dto.TrainerLastName))
+                trainer.lastName = dto.TrainerLastName;
+
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+                trainer.email = dto.Email;
+
+            if (!string.IsNullOrWhiteSpace(dto.Telephone))
+                trainer.telephone = dto.Telephone;
+
+            return await _trainerRepository.UpdateAsync(trainer);
+        }
+
+        public async Task<bool> DeleteAsync(int trainerId)
+        {
+            var trainer = await _trainerRepository.FindByIdAsync(trainerId);
+            if (trainer == null) return false;
+
+            return await _trainerRepository.DeleteAsync(trainerId);
         }
     }
 }

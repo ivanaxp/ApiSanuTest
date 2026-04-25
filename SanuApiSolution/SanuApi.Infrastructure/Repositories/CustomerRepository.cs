@@ -343,7 +343,7 @@ namespace SanuApi.Infrastructure.Repositories
                 var sql = @"INSERT INTO public.absences
                             ( classid, customerid, dateabsence)
                             VALUES(@classid, @customerid, @dateabsence)
-                            RETURNING id;";   
+                            RETURNING id;";
                 var newId = await _db.ExecuteScalarAsync<int>(sql, new
                 {
                     classid = entity.classid,
@@ -356,6 +356,28 @@ namespace SanuApi.Infrastructure.Repositories
             {
                 throw new InvalidOperationException("Error al insertar la asistencia del cliente", e);
             }
+        }
+
+        public async Task<IEnumerable<(Absences Absence, Classes Class)>> GetAbsencesAsync(int customerId)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = @"SELECT a.id, a.customerid, a.classid, a.dateabsence,
+                               cl.id, cl.name, cl.day, cl.hour, cl.capacity
+                        FROM public.absences a
+                        LEFT JOIN classes cl ON cl.id = a.classid
+                        WHERE a.customerid = @CustomerId
+                        ORDER BY a.dateabsence DESC";
+
+            var result = await _db.QueryAsync<Absences, Classes, (Absences, Classes)>(
+                sql,
+                (absence, cls) => (absence, cls),
+                new { CustomerId = customerId },
+                splitOn: "id"
+            );
+
+            return result;
         }
 
     }

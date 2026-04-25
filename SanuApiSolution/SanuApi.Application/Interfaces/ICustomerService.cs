@@ -13,5 +13,6 @@ namespace SanuApi.Aplication.Services
         Task<bool> AddClassesAsync(int customerId, AddCustomerClassRequestDto classCustomer);
         Task<bool> AddMembershipAsync(int customerId, AddCustomerMembershipRequestDto membershipCustomer);
         Task<bool> AddAbsenceAsync(int customerId, AddCustomerAbsenceRequestDto absence);
+        Task<IEnumerable<CustomerAbsenceResponseDto>> GetAbsencesAsync(int customerId);
     }
 }

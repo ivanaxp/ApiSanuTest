@@ -62,5 +62,27 @@ namespace SanuApi.Api.Controllers
             var classes = await _trainerService.GetClassesWithStudentsAsync(trainerId);
             return Ok(classes);
         }
+
+        [HttpPut("trainer/{trainerId}")]
+        [SwaggerOperation(Summary = "Edita un trainer", Description = "Actualiza nombre y/o apellido de un trainer activo")]
+        [SwaggerResponse(204, "Trainer actualizado correctamente")]
+        [SwaggerResponse(404, "No se encontro el trainer")]
+        public async Task<ActionResult> UpdateTrainer(int trainerId, [FromBody] TrainerUpdateRequestDto dto)
+        {
+            var updated = await _trainerService.UpdateAsync(trainerId, dto);
+            if (!updated) return NotFound();
+            return NoContent();
+        }
+
+        [HttpDelete("trainer/{trainerId}")]
+        [SwaggerOperation(Summary = "Elimina un trainer", Description = "Realiza la baja logica del trainer seteando su fecha de baja")]
+        [SwaggerResponse(204, "Trainer dado de baja correctamente")]
+        [SwaggerResponse(404, "No se encontro el trainer")]
+        public async Task<ActionResult> DeleteTrainer(int trainerId)
+        {
+            var deleted = await _trainerService.DeleteAsync(trainerId);
+            if (!deleted) return NotFound();
+            return NoContent();
+        }
     }
 }
