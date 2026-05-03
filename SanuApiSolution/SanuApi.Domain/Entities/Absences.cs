@@ -2,7 +2,7 @@
 
 namespace SanuApi.Domain.Entities
 {
-    [Table("customer_x_membership")]
+    [Table("absences")]
     public class Absences
     {
         [Key]
@@ -10,5 +10,6 @@ namespace SanuApi.Domain.Entities
         public int customerid { get; set; }
         public int classid { get; set; }
         public DateTime dateabsence { get; set; }
+        public string? status { get; set; }
     }
 }

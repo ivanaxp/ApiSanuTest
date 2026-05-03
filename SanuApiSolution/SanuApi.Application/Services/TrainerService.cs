@@ -14,6 +14,19 @@ namespace SanuApi.Application.Services
             _trainerRepository = trainerRepository;
         }
 
+        public async Task<IEnumerable<TrainerResponseDto>> GetAllAsync()
+        {
+            var trainers = await _trainerRepository.GetAllAsync();
+            return trainers.Select(t => new TrainerResponseDto
+            {
+                TrainerId = t.id,
+                TrainerName = t.name,
+                TrainerLastName = t.lastName,
+                Email = t.email,
+                Telephone = t.telephone
+            });
+        }
+
         public async Task<int> AddAsync(TrainerAddRequestDto dto)
         {
             var trainer = new Trainer

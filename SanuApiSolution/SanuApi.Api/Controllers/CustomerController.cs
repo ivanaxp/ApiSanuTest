@@ -148,18 +148,25 @@ namespace SanuApi.Api.Controllers
         }
 
         [HttpPost("{customerId}/absence")]
-        [SwaggerOperation(Summary = "Agrega asistencia a un cliente", Description = "Atoma asistencia al cliente")]
-        [SwaggerResponse(StatusCodes.Status204NoContent)]
+        [SwaggerOperation(
+            Summary = "Registra asistencia o inasistencia de un cliente",
+            Description = "Status: 'presente', 'ausente', 'ausente_justificado'. Si se omite Status, se registra como 'ausente'. El estado 'ausente_justificado' indica que el cliente avisó con anticipación y su lugar queda disponible para ese día.")]
+        [SwaggerResponse(StatusCodes.Status200OK)]
         [SwaggerResponse(StatusCodes.Status400BadRequest)]
-        [SwaggerResponse(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AddAbsenceToCustomer(int customerId, [FromBody] AddCustomerAbsenceRequestDto request)
         {
-            if (request == null )
+            if (request == null)
                 return BadRequest("Debe especificar los datos de la asistencia");
 
-            await _customerService.AddAbsenceAsync(customerId,request);
-
-            return Ok(true);
+            try
+            {
+                await _customerService.AddAbsenceAsync(customerId, request);
+                return Ok(true);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

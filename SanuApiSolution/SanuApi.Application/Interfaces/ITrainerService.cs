@@ -4,6 +4,7 @@ namespace SanuApi.Application.Interfaces
 {
     public interface ITrainerService
     {
+        Task<IEnumerable<TrainerResponseDto>> GetAllAsync();
         Task<int> AddAsync(TrainerAddRequestDto dto);
         Task<int> AddClassesAsync(int trainerId, List<int> classIds);
         Task<IEnumerable<TrainerClassWithStudentsResponseDto>> GetClassesWithStudentsAsync(int trainerId);

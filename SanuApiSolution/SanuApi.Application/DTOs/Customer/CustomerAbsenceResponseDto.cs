@@ -6,5 +6,6 @@ namespace SanuApi.Application.DTOs.Customer
         public int ClassId { get; set; }
         public string ClassName { get; set; }
         public DateTime DateAbsence { get; set; }
+        public string Status { get; set; }
     }
 }

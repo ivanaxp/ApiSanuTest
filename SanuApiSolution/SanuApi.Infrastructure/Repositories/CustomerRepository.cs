@@ -341,14 +341,15 @@ namespace SanuApi.Infrastructure.Repositories
                 if (_db.State != ConnectionState.Open)
                     _db.Open();
                 var sql = @"INSERT INTO public.absences
-                            ( classid, customerid, dateabsence)
-                            VALUES(@classid, @customerid, @dateabsence)
+                            (classid, customerid, dateabsence, status)
+                            VALUES(@classid, @customerid, @dateabsence, @status)
                             RETURNING id;";
                 var newId = await _db.ExecuteScalarAsync<int>(sql, new
                 {
                     classid = entity.classid,
                     customerid = entity.customerid,
-                    dateabsence = entity.dateabsence
+                    dateabsence = entity.dateabsence,
+                    status = entity.status
                 });
                 return newId;
             }
@@ -363,7 +364,7 @@ namespace SanuApi.Infrastructure.Repositories
             if (_db.State != ConnectionState.Open)
                 _db.Open();
 
-            var sql = @"SELECT a.id, a.customerid, a.classid, a.dateabsence,
+            var sql = @"SELECT a.id, a.customerid, a.classid, a.dateabsence, a.status,
                                cl.id, cl.name, cl.day, cl.hour, cl.capacity
                         FROM public.absences a
                         LEFT JOIN classes cl ON cl.id = a.classid

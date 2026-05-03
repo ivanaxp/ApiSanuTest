@@ -102,5 +102,44 @@ namespace SanuApi.Infrastructure.Repositories
             var classes = await _db.QueryAsync<Classes>(sql);
             return classes;
         }
+
+        public async Task<(Classes? Class, IEnumerable<(Customer Customer, string? Status)> Students)> GetAttendanceByDateAsync(int classId, DateTime date)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var cls = await _db.QuerySingleOrDefaultAsync<Classes>(
+                "SELECT id, name, capacity, day, hour FROM classes WHERE id = @ClassId",
+                new { ClassId = classId });
+
+            if (cls == null) return (null, Enumerable.Empty<(Customer, string?)>());
+
+            var sql = @"
+                SELECT c.id, c.customername, c.customerlastname, a.status
+                FROM class_x_customer cxc
+                INNER JOIN customer c ON c.id = cxc.customerid AND c.fechabaja IS NULL
+                LEFT JOIN absences a ON a.customerid = c.id
+                                    AND a.classid = @ClassId
+                                    AND a.dateabsence::date = @Date::date
+                WHERE cxc.classid = @ClassId
+                ORDER BY c.customerlastname, c.customername";
+
+            var rows = await _db.QueryAsync<AttendanceRow>(sql, new { ClassId = classId, Date = date.Date });
+
+            var students = rows.Select(r => (
+                new Customer { id = r.id, customername = r.customername, customerlastname = r.customerlastname },
+                r.status
+            ));
+
+            return (cls, students);
+        }
+
+        private class AttendanceRow
+        {
+            public int id { get; set; }
+            public string customername { get; set; }
+            public string customerlastname { get; set; }
+            public string? status { get; set; }
+        }
     }
 }

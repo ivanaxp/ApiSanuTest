@@ -16,6 +16,15 @@ namespace SanuApi.Api.Controllers
             _trainerService = trainerService;
         }
 
+        [HttpGet("trainers")]
+        [SwaggerOperation(Summary = "Lista todos los trainers activos")]
+        [SwaggerResponse(200, "Lista de trainers", typeof(IEnumerable<TrainerResponseDto>))]
+        public async Task<ActionResult<IEnumerable<TrainerResponseDto>>> GetAllTrainers()
+        {
+            var trainers = await _trainerService.GetAllAsync();
+            return Ok(trainers);
+        }
+
         [HttpPost("trainer")]
         [SwaggerOperation(Summary = "Registra un nuevo trainer")]
         [SwaggerResponse(201, "Trainer creado correctamente", typeof(int))]

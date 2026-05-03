@@ -375,7 +375,18 @@ namespace SanuApi.Aplication.Services
 
         public async Task<bool> AddAbsenceAsync(int customerId, AddCustomerAbsenceRequestDto absence)
         {
-            var result = await _customerRepository.AddAbsenceAsync(new Absences { classid = absence.IdClass, customerid = absence.IdCustomer, dateabsence = absence.DateAbsence });
+            var validStatuses = new[] { "presente", "ausente", "ausente_justificado" };
+            var status = absence.Status?.ToLower();
+            if (status != null && !validStatuses.Contains(status))
+                throw new ArgumentException($"Estado inválido. Los valores permitidos son: {string.Join(", ", validStatuses)}.");
+
+            var result = await _customerRepository.AddAbsenceAsync(new Absences
+            {
+                classid = absence.IdClass,
+                customerid = absence.IdCustomer,
+                dateabsence = absence.DateAbsence,
+                status = status ?? "ausente"
+            });
             return result > 0;
         }
 
@@ -388,7 +399,8 @@ namespace SanuApi.Aplication.Services
                 Id = a.Absence.id,
                 ClassId = a.Absence.classid,
                 ClassName = a.Class?.name,
-                DateAbsence = a.Absence.dateabsence
+                DateAbsence = a.Absence.dateabsence,
+                Status = a.Absence.status
             });
         }
     }

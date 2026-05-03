@@ -86,5 +86,30 @@ namespace SanuApi.Application.Services
                 Name = g.name
             });
         }
+
+        public async Task<ClassAttendanceResponseDto?> GetAttendanceByDateAsync(int classId, DateTime date)
+        {
+            var (cls, students) = await _classRepository.GetAttendanceByDateAsync(classId, date);
+            if (cls == null) return null;
+
+            var studentList = students.Select(s => new StudentAttendanceDto
+            {
+                CustomerId = s.Customer.id,
+                CustomerName = s.Customer.customername,
+                CustomerLastName = s.Customer.customerlastname,
+                Status = s.Status
+            }).ToList();
+
+            return new ClassAttendanceResponseDto
+            {
+                ClassId = cls.id,
+                ClassName = cls.name,
+                Date = date.Date,
+                Capacity = cls.capacity,
+                TotalEnrolled = studentList.Count,
+                FreeSpotsToday = studentList.Count(s => s.Status == "ausente_justificado"),
+                Students = studentList
+            };
+        }
     }
 }

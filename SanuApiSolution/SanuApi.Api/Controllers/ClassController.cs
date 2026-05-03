@@ -18,7 +18,7 @@ namespace SanuApi.Api.Controllers
 
         
         [HttpGet]
-        [SwaggerOperation(Summary = "Obtiene todos los productos", Description = "Devuelve una lista con todos los productos disponibles en la base de datos")]
+        [SwaggerOperation(Summary = "Obtiene todas las clases", Description = "Devuelve una lista con todos las clases disponibles en la base de datos")]
         [SwaggerResponse(200, "Lista de productos", typeof(IEnumerable<ClassFindResponseDto>))]
         public async Task<ActionResult<IEnumerable<ClassFindResponseDto>>> GetAll()
         {
@@ -69,6 +69,19 @@ namespace SanuApi.Api.Controllers
             var clase = await _classlService.DeleteAsync(id);
 
             return CreatedAtAction(nameof(GetById), new { id = clase }, clase);
+        }
+
+        [HttpGet("{id}/attendance")]
+        [SwaggerOperation(
+            Summary = "Obtiene la asistencia de una clase en una fecha",
+            Description = "Devuelve todos los alumnos inscriptos con su estado ('presente', 'ausente', 'ausente_justificado'). Los alumnos sin registro aparecen con status null. FreeSpotsToday indica cuántos lugares quedaron libres por ausencias justificadas.")]
+        [SwaggerResponse(200, "Asistencia de la clase", typeof(ClassAttendanceResponseDto))]
+        [SwaggerResponse(404, "No se encontró la clase")]
+        public async Task<ActionResult<ClassAttendanceResponseDto>> GetAttendanceByDate(int id, [FromQuery] DateTime date)
+        {
+            var result = await _classlService.GetAttendanceByDateAsync(id, date);
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
     }

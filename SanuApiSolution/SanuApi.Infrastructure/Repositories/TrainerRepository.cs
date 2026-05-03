@@ -14,6 +14,15 @@ namespace SanuApi.Infrastructure.Repositories
             _db = db ?? throw new ArgumentNullException(nameof(db));
         }
 
+        public async Task<IEnumerable<Trainer>> GetAllAsync()
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = "SELECT id, name, lastName, email, telephone FROM trainer WHERE endDate IS NULL ORDER BY lastName, name";
+            return await _db.QueryAsync<Trainer>(sql);
+        }
+
         public async Task<int> AddAsync(Trainer entity)
         {
             if (_db.State != ConnectionState.Open)
