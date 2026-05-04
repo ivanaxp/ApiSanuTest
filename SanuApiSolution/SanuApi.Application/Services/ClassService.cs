@@ -87,6 +87,25 @@ namespace SanuApi.Application.Services
             });
         }
 
+        public async Task<IEnumerable<ClassAttendanceRecordResponseDto>> GetAttendanceRecordsAsync(int classId)
+        {
+            var records = await _classRepository.GetAttendanceRecordsAsync(classId);
+
+            return records.Select(r => new ClassAttendanceRecordResponseDto
+            {
+                AttendanceId = r.AttendanceId,
+                Date = r.Date,
+                Status = r.Status,
+                Customer = new AttendanceCustomerDto
+                {
+                    CustomerId = r.Customer.id,
+                    CustomerName = r.Customer.customername,
+                    CustomerLastName = r.Customer.customerlastname,
+                    Celphone = r.Customer.celphone
+                }
+            });
+        }
+
         public async Task<ClassAttendanceResponseDto?> GetAttendanceByDateAsync(int classId, DateTime date)
         {
             var (cls, students) = await _classRepository.GetAttendanceByDateAsync(classId, date);

@@ -11,5 +11,6 @@ namespace SanuApi.Domain.Interfaces
         Task<int> AddCustomerClassesAsync(ClassCustomer entity);
         Task<bool> DeleteAsync(Classes entity);
         Task<(Classes? Class, IEnumerable<(Customer Customer, string? Status)> Students)> GetAttendanceByDateAsync(int classId, DateTime date);
+        Task<IEnumerable<(int AttendanceId, DateTime Date, string Status, Customer Customer)>> GetAttendanceRecordsAsync(int classId);
     }
 }

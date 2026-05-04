@@ -10,5 +10,6 @@ namespace SanuApi.Application.Interfaces
         Task<int> AddAsync(AddClassRequestDto coustomer);
         Task<bool> DeleteAsync(int id);
         Task<ClassAttendanceResponseDto?> GetAttendanceByDateAsync(int classId, DateTime date);
+        Task<IEnumerable<ClassAttendanceRecordResponseDto>> GetAttendanceRecordsAsync(int classId);
     }
 }

@@ -134,12 +134,46 @@ namespace SanuApi.Infrastructure.Repositories
             return (cls, students);
         }
 
+        public async Task<IEnumerable<(int AttendanceId, DateTime Date, string Status, Customer Customer)>> GetAttendanceRecordsAsync(int classId)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = @"
+                SELECT a.id AS attendanceid, a.dateabsence, a.status,
+                       c.id, c.customername, c.customerlastname, c.celphone
+                FROM absences a
+                INNER JOIN customer c ON c.id = a.customerid AND c.fechabaja IS NULL
+                WHERE a.classid = @ClassId
+                ORDER BY a.dateabsence DESC, c.customerlastname, c.customername";
+
+            var rows = await _db.QueryAsync<AttendanceRecordRow>(sql, new { ClassId = classId });
+
+            return rows.Select(r => (
+                r.attendanceid,
+                r.dateabsence,
+                r.status,
+                new Customer { id = r.id, customername = r.customername, customerlastname = r.customerlastname, celphone = r.celphone }
+            ));
+        }
+
         private class AttendanceRow
         {
             public int id { get; set; }
             public string customername { get; set; }
             public string customerlastname { get; set; }
             public string? status { get; set; }
+        }
+
+        private class AttendanceRecordRow
+        {
+            public int attendanceid { get; set; }
+            public DateTime dateabsence { get; set; }
+            public string status { get; set; }
+            public int id { get; set; }
+            public string customername { get; set; }
+            public string customerlastname { get; set; }
+            public string celphone { get; set; }
         }
     }
 }

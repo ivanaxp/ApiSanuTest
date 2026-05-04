@@ -71,6 +71,17 @@ namespace SanuApi.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = clase }, clase);
         }
 
+        [HttpGet("{id}/attendance-records")]
+        [SwaggerOperation(
+            Summary = "Lista todas las asistencias registradas de una clase",
+            Description = "Devuelve el historial completo de asistencias de la clase con datos del alumno. Incluye todos los estados: 'presente', 'ausente', 'ausente_justificado'. Ordenado por fecha descendente.")]
+        [SwaggerResponse(200, "Listado de asistencias", typeof(IEnumerable<ClassAttendanceRecordResponseDto>))]
+        public async Task<ActionResult<IEnumerable<ClassAttendanceRecordResponseDto>>> GetAttendanceRecords(int id)
+        {
+            var records = await _classlService.GetAttendanceRecordsAsync(id);
+            return Ok(records);
+        }
+
         [HttpGet("{id}/attendance")]
         [SwaggerOperation(
             Summary = "Obtiene la asistencia de una clase en una fecha",
