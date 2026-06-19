@@ -115,7 +115,7 @@ namespace SanuApi.Api.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> AddClassesToCustomer( int customerId, [FromBody] AddCustomerClassRequestDto request)
         {
-            if (request == null || !request.ClassIds.Any())
+            if (request == null || request.Classes == null || !request.Classes.Any())
                 return BadRequest("Debe especificar al menos una clase.");
 
             await _customerService.AddClassesAsync(customerId, request);

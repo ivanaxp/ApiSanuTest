@@ -11,13 +11,16 @@ namespace SanuApi.Application.Tests.Services;
 public class MembershipServiceTests
 {
     private Mock<IMembershipRepository> _membershipRepoMock;
+    private Mock<IClassRepository> _classRepoMock;
     private MembershipService _service;
 
     [SetUp]
     public void SetUp()
     {
         _membershipRepoMock = new Mock<IMembershipRepository>();
-        _service = new MembershipService(_membershipRepoMock.Object);
+        _classRepoMock = new Mock<IClassRepository>();
+        _classRepoMock.Setup(r => r.GetByMembershipIdAsync(It.IsAny<int>())).ReturnsAsync(new List<Classes>());
+        _service = new MembershipService(_membershipRepoMock.Object, _classRepoMock.Object);
     }
 
     // ─── GetAllAsync ──────────────────────────────────────────────────────────

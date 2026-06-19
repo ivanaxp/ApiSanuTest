@@ -142,7 +142,11 @@ public class TrainerServiceTests
         var repoResult = new List<(Classes, IEnumerable<Customer>)>
         {
             (
-                new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 },
+                new Classes
+                {
+                    id = 1, name = "Yoga",
+                    Dates = new List<ClassDate> { new ClassDate { id = 1, idclass = 1, day = "Lunes", hour = "08:00", capacity = 10 } }
+                },
                 new List<Customer>
                 {
                     new Customer { id = 1, customername = "Juan", customerlastname = "Perez" }
@@ -156,9 +160,9 @@ public class TrainerServiceTests
         Assert.That(result, Has.Count.EqualTo(1));
         Assert.That(result[0].ClassId, Is.EqualTo(1));
         Assert.That(result[0].ClassName, Is.EqualTo("Yoga"));
-        Assert.That(result[0].Day, Is.EqualTo("Lunes"));
-        Assert.That(result[0].Hour, Is.EqualTo("08:00"));
-        Assert.That(result[0].Capacity, Is.EqualTo(10));
+        Assert.That(result[0].Dates.First().Day, Is.EqualTo("Lunes"));
+        Assert.That(result[0].Dates.First().Hour, Is.EqualTo("08:00"));
+        Assert.That(result[0].Dates.First().Capacity, Is.EqualTo(10));
         Assert.That(result[0].Students, Has.Count.EqualTo(1));
         Assert.That(result[0].Students[0].CustomerName, Is.EqualTo("Juan"));
         Assert.That(result[0].Students[0].CustomerLastName, Is.EqualTo("Perez"));
@@ -170,11 +174,11 @@ public class TrainerServiceTests
         var repoResult = new List<(Classes, IEnumerable<Customer>)>
         {
             (
-                new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 },
+                new Classes { id = 1, name = "Yoga" },
                 new List<Customer> { new Customer { id = 1, customername = "Juan", customerlastname = "Perez" } }
             ),
             (
-                new Classes { id = 2, name = "Pilates", day = "Miercoles", hour = "11:00", capacity = 8 },
+                new Classes { id = 2, name = "Pilates" },
                 new List<Customer>()
             )
         };
@@ -193,7 +197,7 @@ public class TrainerServiceTests
         var repoResult = new List<(Classes, IEnumerable<Customer>)>
         {
             (
-                new Classes { id = 2, name = "Pilates", day = "Martes", hour = "10:00", capacity = 5 },
+                new Classes { id = 2, name = "Pilates" },
                 new List<Customer>()
             )
         };

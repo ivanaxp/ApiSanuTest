@@ -79,38 +79,61 @@ namespace SanuApi.Infrastructure.Repositories
             if (_db.State != ConnectionState.Open)
                 _db.Open();
 
-            var sql = @"
-                SELECT cl.id, cl.name, cl.day, cl.hour, cl.capacity,
-                       c.id, c.customername, c.customerlastname
+            // Load classes with their dates
+            var classSql = @"
+                SELECT cl.id, cl.name, cl.idmembership,
+                       cd.idclass, cd.day, cd.hour, cd.capacity
                 FROM trainer_x_classes txc
                 INNER JOIN classes cl ON cl.id = txc.idclass
-                LEFT JOIN class_x_customer cxc ON cl.id = cxc.classid
-                LEFT JOIN customer c ON c.id = cxc.customerid AND c.fechabaja IS NULL
+                LEFT JOIN class_date cd ON cd.idclass = cl.id
                 WHERE txc.idtrainer = @TrainerId";
 
-            var classesDictionary = new Dictionary<int, (Classes Class, List<Customer> Students)>();
-
-            await _db.QueryAsync<Classes, Customer, Classes>(
-                sql,
-                (cls, customer) =>
+            var classDict = new Dictionary<int, Classes>();
+            await _db.QueryAsync<Classes, ClassDate, Classes>(
+                classSql,
+                (cls, date) =>
                 {
-                    if (!classesDictionary.TryGetValue(cls.id, out var entry))
+                    if (!classDict.TryGetValue(cls.id, out var existing))
                     {
-                        entry = (cls, new List<Customer>());
-                        classesDictionary.Add(cls.id, entry);
+                        existing = cls;
+                        classDict[cls.id] = existing;
                     }
-
-                    if (customer != null && customer.id != 0)
-                        entry.Students.Add(customer);
-
-                    return cls;
+                    if (date != null && date.idclass != 0)
+                        existing.Dates.Add(date);
+                    return existing;
                 },
                 new { TrainerId = trainerId },
-                splitOn: "id"
+                splitOn: "idclass"
             );
 
-            return classesDictionary.Values
-                .Select(e => (e.Class, (IEnumerable<Customer>)e.Students));
+            // Load students per class
+            var studentSql = @"
+                SELECT cxc.classid, c.id, c.customername, c.customerlastname
+                FROM trainer_x_classes txc
+                INNER JOIN class_x_customer cxc ON cxc.classid = txc.idclass
+                INNER JOIN customer c ON c.id = cxc.customerid AND c.fechabaja IS NULL
+                WHERE txc.idtrainer = @TrainerId";
+
+            var studentRows = await _db.QueryAsync<StudentClassRow>(studentSql, new { TrainerId = trainerId });
+            var studentsByClass = studentRows
+                .GroupBy(r => r.classid)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(r => new Customer { id = r.id, customername = r.customername, customerlastname = r.customerlastname }).ToList()
+                );
+
+            return classDict.Values.Select(cls => (
+                cls,
+                (IEnumerable<Customer>)(studentsByClass.TryGetValue(cls.id, out var students) ? students : new List<Customer>())
+            ));
+        }
+
+        private class StudentClassRow
+        {
+            public int classid { get; set; }
+            public int id { get; set; }
+            public string customername { get; set; }
+            public string customerlastname { get; set; }
         }
 
         public async Task<Trainer?> FindByIdAsync(int id)

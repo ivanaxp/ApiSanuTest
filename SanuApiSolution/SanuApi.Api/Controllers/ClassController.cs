@@ -60,6 +60,17 @@ namespace SanuApi.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = clase }, clase);
         }
 
+        [HttpPut]
+        [SwaggerOperation(Summary = "Actualiza una clase", Description = "Actualiza el nombre, membresía y horarios de una clase. Los horarios existentes se reemplazan por los nuevos.")]
+        [SwaggerResponse(200, "Clase actualizada correctamente", typeof(bool))]
+        [SwaggerResponse(404, "No se encontró la clase")]
+        public async Task<ActionResult<bool>> Update([FromBody] UpdateClassRequestDto dto)
+        {
+            var result = await _classlService.UpdateAsync(dto);
+            if (!result) return NotFound();
+            return Ok(result);
+        }
+
         [HttpDelete("{id}")]
         [SwaggerOperation(Summary = "Elimina un objetivo", Description = "Elimina un objetivo en la base de datos")]
         [SwaggerResponse(201, "Objetivo creado correctamente", typeof(bool))]

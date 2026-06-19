@@ -7,5 +7,6 @@ namespace SanuApi.Application.DTOs.Membership
         public string Name { get; set; }
         public decimal Price { get; set; }
         public int Frecuency { get; set; }
+        public List<ClassInMembershipDto>? Classes { get; set; }
     }
 }

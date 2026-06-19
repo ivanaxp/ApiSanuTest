@@ -1,3 +1,4 @@
+using SanuApi.Application.DTOs.Class;
 using SanuApi.Application.DTOs.Trainer;
 using SanuApi.Application.Interfaces;
 using SanuApi.Domain.Entities;
@@ -66,9 +67,12 @@ namespace SanuApi.Application.Services
             {
                 ClassId = r.Class.id,
                 ClassName = r.Class.name,
-                Day = r.Class.day,
-                Hour = r.Class.hour,
-                Capacity = r.Class.capacity,
+                Dates = r.Class.Dates.Select(d => new ClassDateResponseDto
+                {
+                    Day = d.day,
+                    Hour = d.hour,
+                    Capacity = d.capacity
+                }).ToList(),
                 Students = r.Students.Select(s => new StudentInClassDto
                 {
                     CustomerId = s.id,

@@ -94,7 +94,7 @@ public class CustomerControllerTests
             Health = new HealthCustomerDto { Height = 1.75m, Weight = 70m },
             idGoal = new List<int>(),
             Memberships = new List<CustomerMemberShipRequestDto>(),
-            CustomerClasses = new List<int>()
+            CustomerClasses = new List<CustomerClassRequestItem>()
         };
         _serviceMock.Setup(s => s.AddAsync(dto)).ReturnsAsync(5);
 
@@ -187,7 +187,14 @@ public class CustomerControllerTests
     [Test]
     public async Task AddClassesToCustomer_ValidRequest_ReturnsOk()
     {
-        var request = new AddCustomerClassRequestDto { ClassIds = new List<int> { 1, 2 } };
+        var request = new AddCustomerClassRequestDto
+        {
+            Classes = new List<CustomerClassRequestItem>
+            {
+                new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 },
+                new CustomerClassRequestItem { ClassId = 2, ClassDateId = 6 }
+            }
+        };
         _serviceMock.Setup(s => s.AddClassesAsync(1, request)).ReturnsAsync(true);
 
         var actionResult = await _controller.AddClassesToCustomer(1, request);
@@ -208,7 +215,7 @@ public class CustomerControllerTests
     [Test]
     public async Task AddClassesToCustomer_EmptyClassIds_ReturnsBadRequest()
     {
-        var request = new AddCustomerClassRequestDto { ClassIds = new List<int>() };
+        var request = new AddCustomerClassRequestDto { Classes = new List<CustomerClassRequestItem>() };
 
         var actionResult = await _controller.AddClassesToCustomer(1, request);
 

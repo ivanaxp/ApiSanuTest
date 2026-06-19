@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NUnit.Framework;
 using SanuApi.Api.Controllers;
+using SanuApi.Application.DTOs.Class;
 using SanuApi.Application.DTOs.Trainer;
 using SanuApi.Application.Interfaces;
 
@@ -125,7 +126,8 @@ public class EmployeeControllerTests
         {
             new TrainerClassWithStudentsResponseDto
             {
-                ClassId = 1, ClassName = "Yoga", Day = "Lunes", Hour = "08:00", Capacity = 10,
+                ClassId = 1, ClassName = "Yoga",
+                Dates = new List<ClassDateResponseDto> { new ClassDateResponseDto { Day = "Lunes", Hour = "08:00", Capacity = 10 } },
                 Students = new List<StudentInClassDto>
                 {
                     new StudentInClassDto { CustomerId = 1, CustomerName = "Juan", CustomerLastName = "Perez" }
@@ -151,7 +153,8 @@ public class EmployeeControllerTests
         {
             new TrainerClassWithStudentsResponseDto
             {
-                ClassId = 2, ClassName = "Pilates", Day = "Martes", Hour = "10:00", Capacity = 15,
+                ClassId = 2, ClassName = "Pilates",
+                Dates = new List<ClassDateResponseDto> { new ClassDateResponseDto { Day = "Martes", Hour = "10:00", Capacity = 15 } },
                 Students = new List<StudentInClassDto> { student }
             }
         };
@@ -162,8 +165,8 @@ public class EmployeeControllerTests
         var ok = actionResult.Result as OkObjectResult;
         var data = (ok!.Value as IEnumerable<TrainerClassWithStudentsResponseDto>)!.First();
         Assert.That(data.ClassName, Is.EqualTo("Pilates"));
-        Assert.That(data.Day, Is.EqualTo("Martes"));
-        Assert.That(data.Hour, Is.EqualTo("10:00"));
+        Assert.That(data.Dates.First().Day, Is.EqualTo("Martes"));
+        Assert.That(data.Dates.First().Hour, Is.EqualTo("10:00"));
         Assert.That(data.Students, Has.Count.EqualTo(1));
         Assert.That(data.Students[0].CustomerName, Is.EqualTo("Maria"));
     }

@@ -4,9 +4,8 @@ namespace SanuApi.Application.DTOs.Class
     {
         public int ClassId { get; set; }
         public string ClassName { get; set; }
-        public string Day { get; set; }
-        public string Hour { get; set; }
-        public int Capacity { get; set; }
+        public int? IdMembership { get; set; }
+        public List<ClassDateResponseDto> Dates { get; set; } = new();
         public List<CustomerInClassDto> Customers { get; set; }
     }
 
@@ -16,5 +15,8 @@ namespace SanuApi.Application.DTOs.Class
         public string CustomerName { get; set; }
         public string CustomerLastName { get; set; }
         public string Celphone { get; set; }
+        public int? ClassDateId { get; set; }
+        public string? Day { get; set; }
+        public string? Hour { get; set; }
     }
 }

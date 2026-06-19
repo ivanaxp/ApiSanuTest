@@ -8,6 +8,7 @@ namespace SanuApi.Domain.Entities
     {
         public int classid { get; set; }
         public int customerid { get; set; }
+        public int idclassdate { get; set; }
         public DateTime enddate { get; set; }
 
         [Write(false)]

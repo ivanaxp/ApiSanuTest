@@ -1,12 +1,12 @@
+using SanuApi.Application.DTOs.Class;
+
 namespace SanuApi.Application.DTOs.Trainer
 {
     public class TrainerClassWithStudentsResponseDto
     {
         public int ClassId { get; set; }
         public string ClassName { get; set; }
-        public string Day { get; set; }
-        public string Hour { get; set; }
-        public int Capacity { get; set; }
+        public List<ClassDateResponseDto> Dates { get; set; } = new();
         public List<StudentInClassDto> Students { get; set; }
     }
 

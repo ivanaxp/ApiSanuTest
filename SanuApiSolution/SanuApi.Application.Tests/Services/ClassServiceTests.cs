@@ -27,8 +27,8 @@ public class ClassServiceTests
     {
         var classes = new List<Classes>
         {
-            new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 },
-            new Classes { id = 2, name = "Pilates", day = "Martes", hour = "09:00", capacity = 15 }
+            new Classes { id = 1, name = "Yoga", Dates = new List<ClassDate> { new ClassDate { id = 1, idclass = 1, day = "Lunes", hour = "08:00", capacity = 10 } } },
+            new Classes { id = 2, name = "Pilates", Dates = new List<ClassDate> { new ClassDate { id = 2, idclass = 2, day = "Martes", hour = "09:00", capacity = 15 } } }
         };
         _classRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(classes);
 
@@ -52,7 +52,11 @@ public class ClassServiceTests
     {
         var classes = new List<Classes>
         {
-            new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 }
+            new Classes
+            {
+                id = 1, name = "Yoga",
+                Dates = new List<ClassDate> { new ClassDate { id = 5, idclass = 1, day = "Lunes", hour = "08:00", capacity = 10 } }
+            }
         };
         _classRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(classes);
 
@@ -60,9 +64,9 @@ public class ClassServiceTests
 
         Assert.That(result.Id, Is.EqualTo(1));
         Assert.That(result.Name, Is.EqualTo("Yoga"));
-        Assert.That(result.Day, Is.EqualTo("Lunes"));
-        Assert.That(result.Hour, Is.EqualTo("08:00"));
-        Assert.That(result.Capacity, Is.EqualTo(10));
+        Assert.That(result.Dates.First().Day, Is.EqualTo("Lunes"));
+        Assert.That(result.Dates.First().Hour, Is.EqualTo("08:00"));
+        Assert.That(result.Dates.First().Capacity, Is.EqualTo(10));
     }
 
     // ─── FindByIdAsync ────────────────────────────────────────────────────────
@@ -70,7 +74,7 @@ public class ClassServiceTests
     [Test]
     public async Task FindByIdAsync_WhenExists_ReturnsMappedDto()
     {
-        var clase = new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 };
+        var clase = new Classes { id = 1, name = "Yoga" };
         _classRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(clase);
 
         var result = await _service.FindByIdAsync(1);
@@ -95,7 +99,11 @@ public class ClassServiceTests
     [Test]
     public async Task AddAsync_ValidDto_ReturnsNewId()
     {
-        var dto = new AddClassRequestDto { Name = "Yoga", Day = "Lunes", Hour = "08:00", Capacity = 10 };
+        var dto = new AddClassRequestDto
+        {
+            Name = "Yoga",
+            Dates = new List<ClassDateRequestDto> { new ClassDateRequestDto { Day = "Lunes", Hour = "08:00", Capacity = 10 } }
+        };
         _classRepoMock.Setup(r => r.AddAsync(It.IsAny<Classes>())).ReturnsAsync(3);
 
         var result = await _service.AddAsync(dto);
@@ -104,9 +112,9 @@ public class ClassServiceTests
     }
 
     [Test]
-    public async Task AddAsync_MapsAllFieldsToEntity()
+    public async Task AddAsync_MapsNameToEntity()
     {
-        var dto = new AddClassRequestDto { Name = "Crossfit", Day = "Miercoles", Hour = "07:00", Capacity = 20 };
+        var dto = new AddClassRequestDto { Name = "Crossfit" };
         Classes? capturedEntity = null;
         _classRepoMock
             .Setup(r => r.AddAsync(It.IsAny<Classes>()))
@@ -116,9 +124,6 @@ public class ClassServiceTests
         await _service.AddAsync(dto);
 
         Assert.That(capturedEntity!.name, Is.EqualTo("Crossfit"));
-        Assert.That(capturedEntity.day, Is.EqualTo("Miercoles"));
-        Assert.That(capturedEntity.hour, Is.EqualTo("07:00"));
-        Assert.That(capturedEntity.capacity, Is.EqualTo(20));
     }
 
     // ─── DeleteAsync ──────────────────────────────────────────────────────────
@@ -126,7 +131,7 @@ public class ClassServiceTests
     [Test]
     public async Task DeleteAsync_ExistingClass_ReturnsTrue()
     {
-        var clase = new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 };
+        var clase = new Classes { id = 1, name = "Yoga" };
         _classRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(clase);
         _classRepoMock.Setup(r => r.DeleteAsync(clase)).ReturnsAsync(true);
 
@@ -136,13 +141,10 @@ public class ClassServiceTests
     }
 
     [Test]
-    public async Task DeleteAsync_NotExistingClass_ReturnsFalse()
+    public async Task DeleteAsync_NotExistingClass_ThrowsException()
     {
         _classRepoMock.Setup(r => r.FindByIdAsync(99)).ReturnsAsync((Classes?)null);
-        _classRepoMock.Setup(r => r.DeleteAsync(It.IsAny<Classes>())).ReturnsAsync(false);
 
-        var result = await _service.DeleteAsync(99);
-
-        Assert.That(result, Is.False);
+        Assert.ThrowsAsync<InvalidOperationException>(() => _service.DeleteAsync(99));
     }
 }

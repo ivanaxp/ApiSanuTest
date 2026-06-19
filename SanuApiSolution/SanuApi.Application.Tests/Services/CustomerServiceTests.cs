@@ -187,12 +187,14 @@ public class CustomerServiceTests
             Address = "Calle 1",
             Health = new HealthCustomerDto { Height = 1.75m, Weight = 70m, Alergics = "Ninguna" },
             idGoal = new List<int>(),
-            Memberships = new List<CustomerMemberShipRequestDto>(),
-            CustomerClasses = new List<int>()
+            Memberships = new List<CustomerMemberShipRequestDto> { new CustomerMemberShipRequestDto { IdMembership = 1, StartDate = DateTime.Now } },
+            CustomerClasses = new List<CustomerClassRequestItem> { new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 } }
         };
 
         _customerRepoMock.Setup(r => r.AddAsync(It.IsAny<Customer>())).ReturnsAsync(5);
         _healthRepoMock.Setup(r => r.AddAsync(It.IsAny<HealthCustomer>())).ReturnsAsync(1);
+        _membershipRepoMock.Setup(r => r.AddAsync(It.IsAny<CustomerMembership>())).ReturnsAsync(1);
+        _customerRepoMock.Setup(r => r.AddClassesAsync(It.IsAny<ClassCustomer>())).ReturnsAsync(1);
 
         var result = await _service.AddAsync(dto);
 
@@ -213,13 +215,15 @@ public class CustomerServiceTests
             Address = "Calle 1",
             Health = new HealthCustomerDto { Height = 1.75m, Weight = 70m, Alergics = "Ninguna" },
             idGoal = new List<int> { 1, 2 },
-            Memberships = new List<CustomerMemberShipRequestDto>(),
-            CustomerClasses = new List<int>()
+            Memberships = new List<CustomerMemberShipRequestDto> { new CustomerMemberShipRequestDto { IdMembership = 1, StartDate = DateTime.Now } },
+            CustomerClasses = new List<CustomerClassRequestItem> { new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 } }
         };
 
         _customerRepoMock.Setup(r => r.AddAsync(It.IsAny<Customer>())).ReturnsAsync(5);
         _healthRepoMock.Setup(r => r.AddAsync(It.IsAny<HealthCustomer>())).ReturnsAsync(1);
         _goalRepoMock.Setup(r => r.AddCustomerGoalAsync(It.IsAny<CustomerGoal>())).ReturnsAsync(1);
+        _membershipRepoMock.Setup(r => r.AddAsync(It.IsAny<CustomerMembership>())).ReturnsAsync(1);
+        _customerRepoMock.Setup(r => r.AddClassesAsync(It.IsAny<ClassCustomer>())).ReturnsAsync(1);
 
         var result = await _service.AddAsync(dto);
 
@@ -240,8 +244,8 @@ public class CustomerServiceTests
             Address = "Calle 1",
             Health = new HealthCustomerDto { Height = 1.75m, Weight = 70m },
             idGoal = new List<int>(),
-            Memberships = new List<CustomerMemberShipRequestDto>(),
-            CustomerClasses = new List<int>()
+            Memberships = new List<CustomerMemberShipRequestDto> { new CustomerMemberShipRequestDto { IdMembership = 1, StartDate = DateTime.Now } },
+            CustomerClasses = new List<CustomerClassRequestItem> { new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 } }
         };
 
         _customerRepoMock.Setup(r => r.AddAsync(It.IsAny<Customer>())).ReturnsAsync(0);
@@ -298,7 +302,11 @@ public class CustomerServiceTests
         var dto = new CustomerUpdateRequestDto
         {
             IdCustomer = 1,
-            CustomerClasses = new List<int> { 3, 4 }
+            CustomerClasses = new List<CustomerClassRequestItem>
+            {
+                new CustomerClassRequestItem { ClassId = 3, ClassDateId = 10 },
+                new CustomerClassRequestItem { ClassId = 4, ClassDateId = 11 }
+            }
         };
 
         _customerRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(existing);
@@ -326,7 +334,7 @@ public class CustomerServiceTests
         var dto = new CustomerUpdateRequestDto
         {
             IdCustomer = 1,
-            CustomerClasses = new List<int>()
+            CustomerClasses = new List<CustomerClassRequestItem>()
         };
 
         _customerRepoMock.Setup(r => r.FindByIdAsync(1)).ReturnsAsync(existing);
@@ -397,7 +405,11 @@ public class CustomerServiceTests
     {
         var classes = new List<Classes>
         {
-            new Classes { id = 1, name = "Yoga", day = "Lunes", hour = "08:00", capacity = 10 }
+            new Classes
+            {
+                id = 1, name = "Yoga",
+                Dates = new List<ClassDate> { new ClassDate { id = 5, idclass = 1, day = "Lunes", hour = "08:00", capacity = 10 } }
+            }
         };
         _customerRepoMock.Setup(r => r.GetClassesAsync(1)).ReturnsAsync(classes);
 
@@ -405,6 +417,7 @@ public class CustomerServiceTests
 
         Assert.That(result.Count(), Is.EqualTo(1));
         Assert.That(result.First().Name, Is.EqualTo("Yoga"));
+        Assert.That(result.First().Day, Is.EqualTo("Lunes"));
     }
 
     // ─── AddClassesAsync ──────────────────────────────────────────────────────
@@ -412,7 +425,14 @@ public class CustomerServiceTests
     [Test]
     public async Task AddClassesAsync_WithValidIds_ReturnsTrue()
     {
-        var dto = new AddCustomerClassRequestDto { ClassIds = new List<int> { 1, 2 } };
+        var dto = new AddCustomerClassRequestDto
+        {
+            Classes = new List<CustomerClassRequestItem>
+            {
+                new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 },
+                new CustomerClassRequestItem { ClassId = 2, ClassDateId = 6 }
+            }
+        };
         _customerRepoMock.Setup(r => r.AddClassesAsync(It.IsAny<ClassCustomer>())).ReturnsAsync(1);
 
         var result = await _service.AddClassesAsync(1, dto);
@@ -423,7 +443,7 @@ public class CustomerServiceTests
     [Test]
     public async Task AddClassesAsync_EmptyList_ReturnsFalse()
     {
-        var dto = new AddCustomerClassRequestDto { ClassIds = new List<int>() };
+        var dto = new AddCustomerClassRequestDto { Classes = new List<CustomerClassRequestItem>() };
 
         var result = await _service.AddClassesAsync(1, dto);
 
@@ -433,7 +453,13 @@ public class CustomerServiceTests
     [Test]
     public async Task AddClassesAsync_WhenInsertFails_ReturnsFalse()
     {
-        var dto = new AddCustomerClassRequestDto { ClassIds = new List<int> { 1 } };
+        var dto = new AddCustomerClassRequestDto
+        {
+            Classes = new List<CustomerClassRequestItem>
+            {
+                new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 }
+            }
+        };
         _customerRepoMock.Setup(r => r.AddClassesAsync(It.IsAny<ClassCustomer>())).ReturnsAsync(0);
 
         var result = await _service.AddClassesAsync(1, dto);

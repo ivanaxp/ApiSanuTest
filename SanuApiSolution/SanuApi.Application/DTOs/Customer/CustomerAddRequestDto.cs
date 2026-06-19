@@ -77,7 +77,7 @@ namespace SanuApi.Application.DTOs.Customer
         /// Corresponde a las clases del cliente.
         /// </summary>
         ///
-        [SwaggerSchema("Corresponde a los ids de las clases seleccionadas.")]
-        public required List<int> CustomerClasses { get; set; }
+        [SwaggerSchema("Corresponde a las clases y horarios seleccionados para el cliente.")]
+        public required List<CustomerClassRequestItem> CustomerClasses { get; set; }
     }
 }

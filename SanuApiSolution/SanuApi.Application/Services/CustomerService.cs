@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SanuApi.Application.DTOs.Class;
 using SanuApi.Application.DTOs.Customer;
 using SanuApi.Application.DTOs.Goal;
 using SanuApi.Domain.Entities;
@@ -27,16 +28,17 @@ namespace SanuApi.Aplication.Services
         }
         public async Task<bool> AddClassesAsync(int customerId, AddCustomerClassRequestDto classCustomer)
         {
-            if (classCustomer.ClassIds == null || !classCustomer.ClassIds.Any())
+            if (classCustomer.Classes == null || !classCustomer.Classes.Any())
                 return false;
 
-            foreach (var classId in classCustomer.ClassIds)
+            foreach (var item in classCustomer.Classes)
             {
                 var id = await _customerRepository.AddClassesAsync(
                     new ClassCustomer
                     {
                         customerid = customerId,
-                        classid = classId
+                        classid = item.ClassId,
+                        idclassdate = item.ClassDateId
                     });
 
                 if (id <= 0)
@@ -144,7 +146,7 @@ namespace SanuApi.Aplication.Services
 
                     foreach (var item in customer.CustomerClasses)
                     {
-                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { classid = item, customerid = idCustomer });
+                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { classid = item.ClassId, customerid = idCustomer, idclassdate = item.ClassDateId });
                         if (idClassCustomer <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
                     }
 
@@ -213,14 +215,18 @@ namespace SanuApi.Aplication.Services
                     MedicalCondicion = c.healthCustomer?.medicalCondicion,
                     Weight = c.healthCustomer.weight
                 },
-                Classes = classes.Select(cl => new ClassCustomerResponseDto
-                {
-                    ClassId = cl.id,
-                    CustomerId = id,
-                    Name = cl.name,
-                    Day = cl.day,
-                    Hour = cl.hour,
-                    Capacity = cl.capacity
+                Classes = classes.Select(cl => {
+                    var assignedDate = cl.Dates.FirstOrDefault();
+                    return new ClassCustomerResponseDto
+                    {
+                        ClassId = cl.id,
+                        CustomerId = id,
+                        Name = cl.name,
+                        IdMembership = cl.idmembership,
+                        ClassDateId = assignedDate?.id ?? 0,
+                        Day = assignedDate?.day,
+                        Hour = assignedDate?.hour
+                    };
                 }).ToList()
             };
 
@@ -252,14 +258,18 @@ namespace SanuApi.Aplication.Services
         {
             var customers = await _customerRepository.GetClassesAsync(id);
 
-            return customers.Select(c => new ClassCustomerResponseDto
-            {
-                Capacity = c.capacity,
-                ClassId = c.id,
-                CustomerId = id,
-                Day = c.day,
-                Hour = c.hour,
-                Name = c.name
+            return customers.Select(c => {
+                var assignedDate = c.Dates.FirstOrDefault();
+                return new ClassCustomerResponseDto
+                {
+                    ClassId = c.id,
+                    CustomerId = id,
+                    Name = c.name,
+                    IdMembership = c.idmembership,
+                    ClassDateId = assignedDate?.id ?? 0,
+                    Day = assignedDate?.day,
+                    Hour = assignedDate?.hour
+                };
             });
         }
 
@@ -352,12 +362,12 @@ namespace SanuApi.Aplication.Services
                     _logger.LogInformation("[CustomerService.UpdateAsync] Eliminando clases existentes del cliente Id={Id}", customerExisting.id);
                     await _customerRepository.DeleteClassesAsync(customerExisting.id);
 
-                    foreach (var classId in customerUpdate.CustomerClasses)
+                    foreach (var item in customerUpdate.CustomerClasses)
                     {
-                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = classId });
+                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = item.ClassId, idclassdate = item.ClassDateId });
                         if (idClassCustomer <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
                     }
-                    _logger.LogInformation("[CustomerService.UpdateAsync] Clases actualizadas: {Classes}", string.Join(",", customerUpdate.CustomerClasses));
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Clases actualizadas: {Classes}", string.Join(",", customerUpdate.CustomerClasses.Select(c => c.ClassId)));
                 }
 
                 transaction.Commit();

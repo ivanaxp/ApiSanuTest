@@ -27,8 +27,8 @@ public class ClassControllerTests
     {
         var classes = new List<ClassFindResponseDto>
         {
-            new ClassFindResponseDto { Id = 1, Name = "Yoga", Day = "Lunes", Hour = "08:00", Capacity = 10 },
-            new ClassFindResponseDto { Id = 2, Name = "Pilates", Day = "Martes", Hour = "09:00", Capacity = 15 }
+            new ClassFindResponseDto { Id = 1, Name = "Yoga", Dates = new List<ClassDateResponseDto> { new ClassDateResponseDto { Day = "Lunes", Hour = "08:00", Capacity = 10 } } },
+            new ClassFindResponseDto { Id = 2, Name = "Pilates", Dates = new List<ClassDateResponseDto> { new ClassDateResponseDto { Day = "Martes", Hour = "09:00", Capacity = 15 } } }
         };
         _serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(classes);
 
@@ -84,7 +84,7 @@ public class ClassControllerTests
     [Test]
     public async Task Create_ValidDto_ReturnsCreatedAtAction()
     {
-        var dto = new AddClassRequestDto { Name = "Yoga", Day = "Lunes", Hour = "08:00", Capacity = 10 };
+        var dto = new AddClassRequestDto { Name = "Yoga", Dates = new List<ClassDateRequestDto> { new ClassDateRequestDto { Day = "Lunes", Hour = "08:00", Capacity = 10 } } };
         _serviceMock.Setup(s => s.AddAsync(dto)).ReturnsAsync(3);
 
         var actionResult = await _controller.Create(dto);
@@ -98,7 +98,7 @@ public class ClassControllerTests
     [Test]
     public async Task Create_CallsServiceWithCorrectDto()
     {
-        var dto = new AddClassRequestDto { Name = "Crossfit", Day = "Miercoles", Hour = "07:00", Capacity = 20 };
+        var dto = new AddClassRequestDto { Name = "Crossfit", Dates = new List<ClassDateRequestDto> { new ClassDateRequestDto { Day = "Miercoles", Hour = "07:00", Capacity = 20 } } };
         _serviceMock.Setup(s => s.AddAsync(dto)).ReturnsAsync(1);
 
         await _controller.Create(dto);

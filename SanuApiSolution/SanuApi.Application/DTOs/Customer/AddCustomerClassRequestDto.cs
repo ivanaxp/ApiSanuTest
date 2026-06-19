@@ -3,6 +3,6 @@ namespace SanuApi.Application.DTOs.Customer
 {
     public class AddCustomerClassRequestDto
     {
-     public List<int> ClassIds { get; set; }
+        public List<CustomerClassRequestItem> Classes { get; set; }
     }
 }

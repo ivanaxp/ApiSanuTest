@@ -187,15 +187,16 @@ namespace SanuApi.Infrastructure.Repositories
                 if (_db.State != ConnectionState.Open)
                     _db.Open();
 
-                var sql = @"INSERT INTO class_x_customer 
-                    (classid, customerid)
-                    VALUES(@IdClass, @IdCustomer)
-                    RETURNING id;";    // <= ID autogenerado
+                var sql = @"INSERT INTO class_x_customer
+                    (classid, customerid, idclassdate)
+                    VALUES(@IdClass, @IdCustomer, @IdClassDate)
+                    RETURNING id;";
 
                 var newId = await _db.ExecuteScalarAsync<int>(sql, new
                 {
                     IdCustomer = entity.customerid,
-                    IdClass = entity.classid
+                    IdClass = entity.classid,
+                    IdClassDate = entity.idclassdate
                 });
 
                 return newId;
@@ -240,13 +241,13 @@ namespace SanuApi.Infrastructure.Repositories
         {
             if (_db.State != ConnectionState.Open)
                 _db.Open();
-            var sql = @"INSERT INTO class_x_customer (customerid, classid)
-                        SELECT @CustomerId, @ClassId
+            var sql = @"INSERT INTO class_x_customer (customerid, classid, idclassdate)
+                        SELECT @CustomerId, @ClassId, @ClassDateId
                         WHERE NOT EXISTS (
                             SELECT 1 FROM class_x_customer
                             WHERE customerid = @CustomerId AND classid = @ClassId
                         )";
-            await _db.ExecuteAsync(sql, new { CustomerId = entity.customerid, ClassId = entity.classid });
+            await _db.ExecuteAsync(sql, new { CustomerId = entity.customerid, ClassId = entity.classid, ClassDateId = entity.idclassdate });
         }
 
         public async Task<bool> DeleteClassesAsync(int customerId)
@@ -271,12 +272,32 @@ namespace SanuApi.Infrastructure.Repositories
         {
             if (_db.State != ConnectionState.Open)
                 _db.Open();
-            var sql = @"SELECT cl.id, cl.name, cl.day, cl.hour, cl.capacity
+            var sql = @"SELECT cl.id, cl.name, cl.idmembership,
+                               cd.idclass, cd.id, cd.day, cd.hour, cd.capacity
                         FROM classes cl
                         INNER JOIN class_x_customer cxc ON cl.id = cxc.classid
-                        WHERE cxc.customerid = @CustomerId";
-            var classes = await _db.QueryAsync<Classes>(sql, new { CustomerId = id });
-            return classes;
+                        INNER JOIN class_date cd ON cd.id = cxc.idclassdate
+                        WHERE cxc.customerid = @CustomerId
+                        ORDER BY cl.id";
+
+            var classDict = new Dictionary<int, Classes>();
+            await _db.QueryAsync<Classes, ClassDate, Classes>(
+                sql,
+                (cls, date) =>
+                {
+                    if (!classDict.TryGetValue(cls.id, out var existing))
+                    {
+                        existing = cls;
+                        classDict[cls.id] = existing;
+                    }
+                    if (date != null && date.idclass != 0)
+                        existing.Dates.Add(date);
+                    return existing;
+                },
+                new { CustomerId = id },
+                splitOn: "idclass"
+            );
+            return classDict.Values;
         }
 
         public async Task<bool> UpdateAsync(Customer entity)
@@ -365,7 +386,7 @@ namespace SanuApi.Infrastructure.Repositories
                 _db.Open();
 
             var sql = @"SELECT a.id, a.customerid, a.classid, a.dateabsence, a.status,
-                               cl.id, cl.name, cl.day, cl.hour, cl.capacity
+                               cl.id, cl.name, cl.idmembership
                         FROM public.absences a
                         LEFT JOIN classes cl ON cl.id = a.classid
                         WHERE a.customerid = @CustomerId
