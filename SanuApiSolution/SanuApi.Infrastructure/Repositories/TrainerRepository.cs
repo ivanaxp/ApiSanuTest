@@ -50,28 +50,37 @@ namespace SanuApi.Infrastructure.Repositories
             }
         }
 
-        public async Task<bool> AddClassAsync(TrainerClasses entity)
+        public async Task<bool> AddClassDateAsync(TrainerClassDate entity)
         {
             if (_db.State != ConnectionState.Open)
                 _db.Open();
 
             var sql = @"
-                INSERT INTO trainer_x_classes (idtrainer, idclass)
-                VALUES (@IdTrainer, @IdClass);";
+                INSERT INTO trainer_x_class_date (idtrainer, idclassdate)
+                VALUES (@IdTrainer, @IdClassDate);";
 
             try
             {
                 var rows = await _db.ExecuteAsync(sql, new
                 {
                     IdTrainer = entity.idtrainer,
-                    IdClass = entity.idclass
+                    IdClassDate = entity.idclassdate
                 });
                 return rows > 0;
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Error al asignar la clase al trainer: {e.Message}", e);
+                throw new InvalidOperationException($"Error al asignar el horario al trainer: {e.Message}", e);
             }
+        }
+
+        public async Task<IEnumerable<int>> GetExistingClassDateIdsForClassAsync(int classId, IEnumerable<int> classDateIds)
+        {
+            if (_db.State != ConnectionState.Open)
+                _db.Open();
+
+            var sql = "SELECT id FROM class_date WHERE idclass = @ClassId AND id = ANY(@Ids)";
+            return await _db.QueryAsync<int>(sql, new { ClassId = classId, Ids = classDateIds.ToArray() });
         }
 
         public async Task<IEnumerable<(Classes Class, IEnumerable<Customer> Students)>> GetClassesWithStudentsAsync(int trainerId)
@@ -79,14 +88,14 @@ namespace SanuApi.Infrastructure.Repositories
             if (_db.State != ConnectionState.Open)
                 _db.Open();
 
-            // Load classes with their dates
+            // Load classes with the dates (horarios) assigned to this trainer
             var classSql = @"
-                SELECT cl.id, cl.name, cl.idmembership,
+                SELECT cl.id, cl.name,
                        cd.idclass, cd.day, cd.hour, cd.capacity
-                FROM trainer_x_classes txc
-                INNER JOIN classes cl ON cl.id = txc.idclass
-                LEFT JOIN class_date cd ON cd.idclass = cl.id
-                WHERE txc.idtrainer = @TrainerId";
+                FROM trainer_x_class_date txcd
+                INNER JOIN class_date cd ON cd.id = txcd.idclassdate
+                INNER JOIN classes cl ON cl.id = cd.idclass
+                WHERE txcd.idtrainer = @TrainerId";
 
             var classDict = new Dictionary<int, Classes>();
             await _db.QueryAsync<Classes, ClassDate, Classes>(
@@ -106,13 +115,17 @@ namespace SanuApi.Infrastructure.Repositories
                 splitOn: "idclass"
             );
 
-            // Load students per class
+            // Load students per class (classes reached through the trainer's assigned horarios)
             var studentSql = @"
                 SELECT cxc.classid, c.id, c.customername, c.customerlastname
-                FROM trainer_x_classes txc
-                INNER JOIN class_x_customer cxc ON cxc.classid = txc.idclass
-                INNER JOIN customer c ON c.id = cxc.customerid AND c.fechabaja IS NULL
-                WHERE txc.idtrainer = @TrainerId";
+                FROM (
+                    SELECT DISTINCT cd.idclass
+                    FROM trainer_x_class_date txcd
+                    INNER JOIN class_date cd ON cd.id = txcd.idclassdate
+                    WHERE txcd.idtrainer = @TrainerId
+                ) trainer_classes
+                INNER JOIN class_x_customer cxc ON cxc.classid = trainer_classes.idclass
+                INNER JOIN customer c ON c.id = cxc.customerid AND c.fechabaja IS NULL";
 
             var studentRows = await _db.QueryAsync<StudentClassRow>(studentSql, new { TrainerId = trainerId });
             var studentsByClass = studentRows

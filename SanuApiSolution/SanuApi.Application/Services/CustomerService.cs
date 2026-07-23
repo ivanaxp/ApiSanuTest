@@ -33,16 +33,19 @@ namespace SanuApi.Aplication.Services
 
             foreach (var item in classCustomer.Classes)
             {
-                var id = await _customerRepository.AddClassesAsync(
-                    new ClassCustomer
-                    {
-                        customerid = customerId,
-                        classid = item.ClassId,
-                        idclassdate = item.ClassDateId
-                    });
+                foreach (var classDateId in item.ClassDateIds)
+                {
+                    var id = await _customerRepository.AddClassesAsync(
+                        new ClassCustomer
+                        {
+                            customerid = customerId,
+                            classid = item.ClassId,
+                            idclassdate = classDateId
+                        });
 
-                if (id <= 0)
-                    return false;
+                    if (id <= 0)
+                        return false;
+                }
             }
 
             return true;
@@ -146,8 +149,11 @@ namespace SanuApi.Aplication.Services
 
                     foreach (var item in customer.CustomerClasses)
                     {
-                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { classid = item.ClassId, customerid = idCustomer, idclassdate = item.ClassDateId });
-                        if (idClassCustomer <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
+                        foreach (var classDateId in item.ClassDateIds)
+                        {
+                            var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { classid = item.ClassId, customerid = idCustomer, idclassdate = classDateId });
+                            if (idClassCustomer <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
+                        }
                     }
 
                 }
@@ -215,19 +221,18 @@ namespace SanuApi.Aplication.Services
                     MedicalCondicion = c.healthCustomer?.medicalCondicion,
                     Weight = c.healthCustomer.weight
                 },
-                Classes = classes.Select(cl => {
-                    var assignedDate = cl.Dates.FirstOrDefault();
-                    return new ClassCustomerResponseDto
+                Classes = classes.SelectMany(cl =>
+                    cl.Dates.Select(assignedDate => new ClassCustomerResponseDto
                     {
                         ClassId = cl.id,
                         CustomerId = id,
                         Name = cl.name,
-                        IdMembership = cl.idmembership,
-                        ClassDateId = assignedDate?.id ?? 0,
-                        Day = assignedDate?.day,
-                        Hour = assignedDate?.hour
-                    };
-                }).ToList()
+                        MembershipIds = cl.Memberships.Select(m => m.id).ToList(),
+                        ClassDateId = assignedDate.id,
+                        Day = assignedDate.day,
+                        Hour = assignedDate.hour
+                    })
+                ).ToList()
             };
 
         }
@@ -258,19 +263,18 @@ namespace SanuApi.Aplication.Services
         {
             var customers = await _customerRepository.GetClassesAsync(id);
 
-            return customers.Select(c => {
-                var assignedDate = c.Dates.FirstOrDefault();
-                return new ClassCustomerResponseDto
+            return customers.SelectMany(c =>
+                c.Dates.Select(assignedDate => new ClassCustomerResponseDto
                 {
                     ClassId = c.id,
                     CustomerId = id,
                     Name = c.name,
-                    IdMembership = c.idmembership,
-                    ClassDateId = assignedDate?.id ?? 0,
-                    Day = assignedDate?.day,
-                    Hour = assignedDate?.hour
-                };
-            });
+                    MembershipIds = c.Memberships.Select(m => m.id).ToList(),
+                    ClassDateId = assignedDate.id,
+                    Day = assignedDate.day,
+                    Hour = assignedDate.hour
+                })
+            );
         }
 
         public async Task<bool> UpdateAsync(CustomerUpdateRequestDto customerUpdate)
@@ -359,15 +363,27 @@ namespace SanuApi.Aplication.Services
 
                 if (customerUpdate.CustomerClasses != null)
                 {
-                    _logger.LogInformation("[CustomerService.UpdateAsync] Eliminando clases existentes del cliente Id={Id}", customerExisting.id);
-                    await _customerRepository.DeleteClassesAsync(customerExisting.id);
+                    var existingClasses = await _customerRepository.GetClassesAsync(customerExisting.id);
+                    var existingPairs = existingClasses
+                        .SelectMany(cl => cl.Dates.Select(d => (ClassId: cl.id, ClassDateId: d.id)))
+                        .ToHashSet();
 
-                    foreach (var item in customerUpdate.CustomerClasses)
+                    var requestedPairs = customerUpdate.CustomerClasses
+                        .SelectMany(c => c.ClassDateIds.Select(dateId => (ClassId: c.ClassId, ClassDateId: dateId)))
+                        .ToHashSet();
+
+                    var toRemove = existingPairs.Except(requestedPairs).ToList();
+                    var toAdd = requestedPairs.Except(existingPairs).ToList();
+
+                    foreach (var pair in toRemove)
+                        await _customerRepository.DeleteClassAsync(customerExisting.id, pair.ClassId, pair.ClassDateId);
+
+                    foreach (var pair in toAdd)
                     {
-                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = item.ClassId, idclassdate = item.ClassDateId });
+                        var idClassCustomer = await _customerRepository.AddClassesAsync(new ClassCustomer { customerid = customerExisting.id, classid = pair.ClassId, idclassdate = pair.ClassDateId });
                         if (idClassCustomer <= 0) throw new InvalidOperationException("No se pudo guardar la clase del cliente.");
                     }
-                    _logger.LogInformation("[CustomerService.UpdateAsync] Clases actualizadas: {Classes}", string.Join(",", customerUpdate.CustomerClasses.Select(c => c.ClassId)));
+                    _logger.LogInformation("[CustomerService.UpdateAsync] Clases sincronizadas. Agregadas={Added}, Eliminadas={Removed}", toAdd.Count, toRemove.Count);
                 }
 
                 transaction.Commit();

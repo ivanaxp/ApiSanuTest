@@ -10,6 +10,8 @@ namespace SanuApi.Domain.Interfaces
         Task<int> AddAsync(Classes entity);
         Task AddDatesAsync(int classId, IEnumerable<ClassDate> dates);
         Task ReplaceDatesAsync(int classId, IEnumerable<ClassDate> dates);
+        Task AddMembershipsAsync(int classId, IEnumerable<int> membershipIds);
+        Task ReplaceMembershipsAsync(int classId, IEnumerable<int> membershipIds);
         Task<bool> UpdateAsync(Classes entity);
         Task<int> AddCustomerClassesAsync(ClassCustomer entity);
         Task<bool> DeleteAsync(Classes entity);

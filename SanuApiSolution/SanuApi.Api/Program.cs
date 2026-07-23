@@ -32,7 +32,8 @@ builder.Services.AddScoped<IClassRepository, ClassRepository>();
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<IMembershipRepository, MembershipRepository>();
 builder.Services.AddScoped<ICustomerMembershipRepository, CustomerMemberShipRepository>();
-builder.Services.AddScoped<IHealthCustomerRepository, HealthCustomerRepository>(); 
+builder.Services.AddScoped<IHealthCustomerRepository, HealthCustomerRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 // 🚀 Servicios
 builder.Services.AddScoped<ITrainerService, TrainerService>();
@@ -40,6 +41,7 @@ builder.Services.AddScoped<IGoalService, GoalService>();
 builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IMembershipService, MembershipService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // 🚀 Controladores + JSON con enums como string
 builder.Services.AddControllers()

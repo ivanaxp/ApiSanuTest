@@ -191,8 +191,8 @@ public class CustomerControllerTests
         {
             Classes = new List<CustomerClassRequestItem>
             {
-                new CustomerClassRequestItem { ClassId = 1, ClassDateId = 5 },
-                new CustomerClassRequestItem { ClassId = 2, ClassDateId = 6 }
+                new CustomerClassRequestItem { ClassId = 1, ClassDateIds = new List<int> { 5 } },
+                new CustomerClassRequestItem { ClassId = 2, ClassDateIds = new List<int> { 6 } }
             }
         };
         _serviceMock.Setup(s => s.AddClassesAsync(1, request)).ReturnsAsync(true);

@@ -9,9 +9,11 @@ namespace SanuApi.Domain.Entities
         [Key]
         public int id { get; set; }
         public string name { get; set; }
-        public int? idmembership { get; set; }
 
         [Write(false)]
         public List<ClassDate> Dates { get; set; } = new();
+
+        [Write(false)]
+        public List<Membership> Memberships { get; set; } = new();
     }
 }

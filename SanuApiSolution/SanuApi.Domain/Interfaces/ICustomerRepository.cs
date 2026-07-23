@@ -11,7 +11,7 @@ namespace SanuApi.Domain.Interfaces {
         Task<int> AddClassesAsync(ClassCustomer entity);
         Task UpsertGoalAsync(CustomerGoal entity);
         Task UpsertClassAsync(ClassCustomer entity);
-        Task<bool> DeleteClassesAsync(int customerId);
+        Task<bool> DeleteClassAsync(int customerId, int classId, int classDateId);
         Task<bool> DeleteGoalsAsync(int customerId);
         Task<bool> UpdateAsync(Customer entity);
         Task<int> AddAbsenceAsync(Absences entity);

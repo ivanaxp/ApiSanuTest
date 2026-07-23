@@ -43,14 +43,14 @@ namespace SanuApi.Api.Controllers
         }
 
         [HttpPost("trainer/{trainerId}/classes")]
-        [SwaggerOperation(Summary = "Asigna un conjunto de clases a un trainer")]
-        [SwaggerResponse(201, "Clases asignadas correctamente. Retorna la cantidad de clases asignadas.", typeof(int))]
+        [SwaggerOperation(Summary = "Asigna a un trainer un conjunto de horarios de una clase")]
+        [SwaggerResponse(201, "Horarios asignados correctamente. Retorna la cantidad de horarios asignados.", typeof(int))]
         [SwaggerResponse(400, "Datos invalidos")]
         public async Task<ActionResult<int>> AssignClasses(int trainerId, [FromBody] TrainerAssignClassesRequestDto dto)
         {
             try
             {
-                var count = await _trainerService.AddClassesAsync(trainerId, dto.ClassIds);
+                var count = await _trainerService.AddClassDatesAsync(trainerId, dto.ClassId, dto.ClassDateIds);
                 return StatusCode(201, count);
             }
             catch (ArgumentException ex)

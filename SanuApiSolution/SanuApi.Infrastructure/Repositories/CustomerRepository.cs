@@ -250,13 +250,13 @@ namespace SanuApi.Infrastructure.Repositories
             await _db.ExecuteAsync(sql, new { CustomerId = entity.customerid, ClassId = entity.classid, ClassDateId = entity.idclassdate });
         }
 
-        public async Task<bool> DeleteClassesAsync(int customerId)
+        public async Task<bool> DeleteClassAsync(int customerId, int classId, int classDateId)
         {
             if (_db.State != ConnectionState.Open)
                 _db.Open();
-            var sql = "DELETE FROM class_x_customer WHERE customerid = @CustomerId";
-            var rows = await _db.ExecuteAsync(sql, new { CustomerId = customerId });
-            return rows >= 0;
+            var sql = "DELETE FROM class_x_customer WHERE customerid = @CustomerId AND classid = @ClassId AND idclassdate = @ClassDateId";
+            var rows = await _db.ExecuteAsync(sql, new { CustomerId = customerId, ClassId = classId, ClassDateId = classDateId });
+            return rows > 0;
         }
 
         public async Task<bool> DeleteGoalsAsync(int customerId)
@@ -272,7 +272,7 @@ namespace SanuApi.Infrastructure.Repositories
         {
             if (_db.State != ConnectionState.Open)
                 _db.Open();
-            var sql = @"SELECT cl.id, cl.name, cl.idmembership,
+            var sql = @"SELECT cl.id, cl.name,
                                cd.idclass, cd.id, cd.day, cd.hour, cd.capacity
                         FROM classes cl
                         INNER JOIN class_x_customer cxc ON cl.id = cxc.classid
@@ -297,7 +297,36 @@ namespace SanuApi.Infrastructure.Repositories
                 new { CustomerId = id },
                 splitOn: "idclass"
             );
+
+            if (classDict.Count > 0)
+            {
+                const string membershipSql = @"
+                    SELECT cxm.classid, m.id, m.name, m.price, m.frecuency
+                    FROM class_x_membership cxm
+                    INNER JOIN membership m ON m.id = cxm.membershipid
+                    WHERE cxm.classid = ANY(@ClassIds)";
+
+                var membershipRows = await _db.QueryAsync<ClassMembershipRow>(
+                    membershipSql, new { ClassIds = classDict.Keys.ToList() });
+
+                foreach (var group in membershipRows.GroupBy(r => r.classid))
+                {
+                    classDict[group.Key].Memberships = group
+                        .Select(r => new Membership { id = r.id, name = r.name, price = r.price, frecuency = r.frecuency })
+                        .ToList();
+                }
+            }
+
             return classDict.Values;
+        }
+
+        private class ClassMembershipRow
+        {
+            public int classid { get; set; }
+            public int id { get; set; }
+            public string name { get; set; }
+            public decimal price { get; set; }
+            public int frecuency { get; set; }
         }
 
         public async Task<bool> UpdateAsync(Customer entity)
@@ -386,7 +415,7 @@ namespace SanuApi.Infrastructure.Repositories
                 _db.Open();
 
             var sql = @"SELECT a.id, a.customerid, a.classid, a.dateabsence, a.status,
-                               cl.id, cl.name, cl.idmembership
+                               cl.id, cl.name
                         FROM public.absences a
                         LEFT JOIN classes cl ON cl.id = a.classid
                         WHERE a.customerid = @CustomerId

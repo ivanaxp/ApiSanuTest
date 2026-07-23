@@ -30,6 +30,14 @@ namespace SanuApi.Application.Services
 
         public async Task<int> AddAsync(TrainerAddRequestDto dto)
         {
+            var hasClassDates = dto.ClassDateIds != null && dto.ClassDateIds.Any();
+            if (hasClassDates)
+            {
+                if (dto.ClassId == null)
+                    throw new ArgumentException("Debe especificar ClassId junto con ClassDateIds.");
+                await ValidateClassDateIdsAsync(dto.ClassId.Value, dto.ClassDateIds!);
+            }
+
             var trainer = new Trainer
             {
                 name = dto.TrainerName,
@@ -37,23 +45,42 @@ namespace SanuApi.Application.Services
                 email = dto.Email,
                 telephone = dto.Telephone
             };
-            return await _trainerRepository.AddAsync(trainer);
+            var id = await _trainerRepository.AddAsync(trainer);
+
+            if (hasClassDates)
+                await AssignClassDatesAsync(id, dto.ClassDateIds!);
+
+            return id;
         }
 
-        public async Task<int> AddClassesAsync(int trainerId, List<int> classIds)
+        public async Task<int> AddClassDatesAsync(int trainerId, int classId, List<int> classDateIds)
         {
-            if (!classIds.Any())
-                throw new ArgumentException("Debe especificar al menos una clase.");
+            await ValidateClassDateIdsAsync(classId, classDateIds);
+            return await AssignClassDatesAsync(trainerId, classDateIds);
+        }
 
+        private async Task ValidateClassDateIdsAsync(int classId, List<int> classDateIds)
+        {
+            if (!classDateIds.Any())
+                throw new ArgumentException("Debe especificar al menos un horario.");
+
+            var existingIds = (await _trainerRepository.GetExistingClassDateIdsForClassAsync(classId, classDateIds)).ToHashSet();
+            var invalidIds = classDateIds.Where(id => !existingIds.Contains(id)).ToList();
+            if (invalidIds.Any())
+                throw new ArgumentException($"Los siguientes horarios no pertenecen a la clase {classId} o no existen: {string.Join(", ", invalidIds)}");
+        }
+
+        private async Task<int> AssignClassDatesAsync(int trainerId, List<int> classDateIds)
+        {
             var count = 0;
-            foreach (var classId in classIds)
+            foreach (var classDateId in classDateIds)
             {
-                var trainerClass = new TrainerClasses
+                var trainerClassDate = new TrainerClassDate
                 {
                     idtrainer = trainerId,
-                    idclass = classId
+                    idclassdate = classDateId
                 };
-                var inserted = await _trainerRepository.AddClassAsync(trainerClass);
+                var inserted = await _trainerRepository.AddClassDateAsync(trainerClassDate);
                 if (inserted) count++;
             }
             return count;

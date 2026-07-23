@@ -18,8 +18,7 @@ namespace SanuApi.Application.Services
         {
             var newClass = new Classes
             {
-                name = dto.Name,
-                idmembership = dto.IdMembership
+                name = dto.Name
             };
             var classId = await _classRepository.AddAsync(newClass);
 
@@ -35,6 +34,9 @@ namespace SanuApi.Application.Services
                 await _classRepository.AddDatesAsync(classId, dates);
             }
 
+            if (dto.MembershipIds?.Count > 0)
+                await _classRepository.AddMembershipsAsync(classId, dto.MembershipIds);
+
             return classId;
         }
 
@@ -43,8 +45,7 @@ namespace SanuApi.Application.Services
             var entity = new Classes
             {
                 id = dto.Id,
-                name = dto.Name,
-                idmembership = dto.IdMembership
+                name = dto.Name
             };
             var updated = await _classRepository.UpdateAsync(entity);
             if (!updated) return false;
@@ -57,6 +58,8 @@ namespace SanuApi.Application.Services
                 capacity = d.Capacity
             });
             await _classRepository.ReplaceDatesAsync(dto.Id, dates);
+
+            await _classRepository.ReplaceMembershipsAsync(dto.Id, dto.MembershipIds ?? new());
             return true;
         }
 
@@ -89,7 +92,7 @@ namespace SanuApi.Application.Services
             {
                 ClassId = cls.id,
                 ClassName = cls.name,
-                IdMembership = cls.idmembership,
+                MembershipIds = cls.Memberships.Select(m => m.id).ToList(),
                 Dates = cls.Dates.Select(MapDateToDto).ToList(),
                 Customers = customers.Select(c => new CustomerInClassDto
                 {
@@ -151,7 +154,7 @@ namespace SanuApi.Application.Services
         {
             Id = cls.id,
             Name = cls.name,
-            IdMembership = cls.idmembership,
+            MembershipIds = cls.Memberships.Select(m => m.id).ToList(),
             Dates = cls.Dates.Select(MapDateToDto).ToList()
         };
 

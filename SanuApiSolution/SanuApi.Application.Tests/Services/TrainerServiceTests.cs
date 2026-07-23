@@ -69,69 +69,154 @@ public class TrainerServiceTests
         Assert.ThrowsAsync<InvalidOperationException>(() => _service.AddAsync(dto));
     }
 
-    // ─── AddClassesAsync ──────────────────────────────────────────────────────
+    [Test]
+    public async Task AddAsync_WithClassDateIds_ValidatesThenAssignsSchedules()
+    {
+        var dto = new TrainerAddRequestDto
+        {
+            TrainerName = "Carlos",
+            TrainerLastName = "Gomez",
+            ClassId = 3,
+            ClassDateIds = new List<int> { 7, 8 }
+        };
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(3, It.IsAny<IEnumerable<int>>()))
+            .ReturnsAsync(new List<int> { 7, 8 });
+        _repoMock.Setup(r => r.AddAsync(It.IsAny<Trainer>())).ReturnsAsync(9);
+        _repoMock.Setup(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>())).ReturnsAsync(true);
+
+        var id = await _service.AddAsync(dto);
+
+        Assert.That(id, Is.EqualTo(9));
+        _repoMock.Verify(r => r.AddClassDateAsync(It.Is<TrainerClassDate>(tc => tc.idtrainer == 9 && tc.idclassdate == 7)), Times.Once);
+        _repoMock.Verify(r => r.AddClassDateAsync(It.Is<TrainerClassDate>(tc => tc.idtrainer == 9 && tc.idclassdate == 8)), Times.Once);
+    }
 
     [Test]
-    public async Task AddClassesAsync_ValidList_ReturnsCountOfInserted()
+    public async Task AddAsync_WithInvalidClassDateId_DoesNotCreateTrainer()
     {
-        var classIds = new List<int> { 1, 2, 3 };
-        _repoMock.Setup(r => r.AddClassAsync(It.IsAny<TrainerClasses>())).ReturnsAsync(true);
+        var dto = new TrainerAddRequestDto
+        {
+            TrainerName = "Carlos",
+            TrainerLastName = "Gomez",
+            ClassId = 3,
+            ClassDateIds = new List<int> { 7, 99 }
+        };
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(3, It.IsAny<IEnumerable<int>>()))
+            .ReturnsAsync(new List<int> { 7 });
 
-        var result = await _service.AddClassesAsync(1, classIds);
+        Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(dto));
+        _repoMock.Verify(r => r.AddAsync(It.IsAny<Trainer>()), Times.Never);
+    }
+
+    [Test]
+    public async Task AddAsync_WithClassDateIdsButNoClassId_ThrowsArgumentException()
+    {
+        var dto = new TrainerAddRequestDto
+        {
+            TrainerName = "Carlos",
+            TrainerLastName = "Gomez",
+            ClassDateIds = new List<int> { 7, 8 }
+        };
+
+        Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(dto));
+        _repoMock.Verify(r => r.AddAsync(It.IsAny<Trainer>()), Times.Never);
+    }
+
+    // ─── AddClassDatesAsync ───────────────────────────────────────────────────
+
+    [Test]
+    public async Task AddClassDatesAsync_ValidList_ReturnsCountOfInserted()
+    {
+        var classDateIds = new List<int> { 1, 2, 3 };
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(classDateIds);
+        _repoMock.Setup(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>())).ReturnsAsync(true);
+
+        var result = await _service.AddClassDatesAsync(1, 5, classDateIds);
 
         Assert.That(result, Is.EqualTo(3));
     }
 
     [Test]
-    public async Task AddClassesAsync_CallsRepositoryOncePerClassId()
+    public async Task AddClassDatesAsync_CallsRepositoryOncePerClassDateId()
     {
-        var classIds = new List<int> { 5, 6, 7 };
-        _repoMock.Setup(r => r.AddClassAsync(It.IsAny<TrainerClasses>())).ReturnsAsync(true);
+        var classDateIds = new List<int> { 5, 6, 7 };
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(classDateIds);
+        _repoMock.Setup(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>())).ReturnsAsync(true);
 
-        await _service.AddClassesAsync(1, classIds);
+        await _service.AddClassDatesAsync(1, 5, classDateIds);
 
-        _repoMock.Verify(r => r.AddClassAsync(It.IsAny<TrainerClasses>()), Times.Exactly(3));
+        _repoMock.Verify(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>()), Times.Exactly(3));
     }
 
     [Test]
-    public async Task AddClassesAsync_MapsIdsCorrectly()
+    public async Task AddClassDatesAsync_MapsIdsCorrectly()
     {
-        var captured = new List<TrainerClasses>();
-        _repoMock.Setup(r => r.AddClassAsync(It.IsAny<TrainerClasses>()))
-            .Callback<TrainerClasses>(tc => captured.Add(tc))
+        var captured = new List<TrainerClassDate>();
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(new List<int> { 7, 8 });
+        _repoMock.Setup(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>()))
+            .Callback<TrainerClassDate>(tc => captured.Add(tc))
             .ReturnsAsync(true);
 
-        await _service.AddClassesAsync(4, new List<int> { 7, 8 });
+        await _service.AddClassDatesAsync(4, 5, new List<int> { 7, 8 });
 
         Assert.That(captured, Has.Count.EqualTo(2));
         Assert.That(captured[0].idtrainer, Is.EqualTo(4));
-        Assert.That(captured[0].idclass, Is.EqualTo(7));
+        Assert.That(captured[0].idclassdate, Is.EqualTo(7));
         Assert.That(captured[1].idtrainer, Is.EqualTo(4));
-        Assert.That(captured[1].idclass, Is.EqualTo(8));
+        Assert.That(captured[1].idclassdate, Is.EqualTo(8));
     }
 
     [Test]
-    public async Task AddClassesAsync_EmptyList_ThrowsArgumentException()
+    public async Task AddClassDatesAsync_EmptyList_ThrowsArgumentException()
     {
-        Assert.ThrowsAsync<ArgumentException>(() => _service.AddClassesAsync(1, new List<int>()));
+        Assert.ThrowsAsync<ArgumentException>(() => _service.AddClassDatesAsync(1, 5, new List<int>()));
     }
 
     [Test]
-    public async Task AddClassesAsync_EmptyList_DoesNotCallRepository()
+    public async Task AddClassDatesAsync_EmptyList_DoesNotCallRepository()
     {
-        try { await _service.AddClassesAsync(1, new List<int>()); } catch { }
+        try { await _service.AddClassDatesAsync(1, 5, new List<int>()); } catch { }
 
-        _repoMock.Verify(r => r.AddClassAsync(It.IsAny<TrainerClasses>()), Times.Never);
+        _repoMock.Verify(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>()), Times.Never);
     }
 
     [Test]
-    public async Task AddClassesAsync_WhenRepositoryThrows_PropagatesException()
+    public async Task AddClassDatesAsync_NonExistentClassDateId_ThrowsArgumentException()
     {
-        _repoMock.Setup(r => r.AddClassAsync(It.IsAny<TrainerClasses>()))
-            .ThrowsAsync(new InvalidOperationException("Error al asignar la clase al trainer"));
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(new List<int> { 5 });
+
+        Assert.ThrowsAsync<ArgumentException>(() => _service.AddClassDatesAsync(1, 5, new List<int> { 5, 99 }));
+    }
+
+    [Test]
+    public async Task AddClassDatesAsync_NonExistentClassDateId_DoesNotCallRepository()
+    {
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(new List<int> { 5 });
+
+        try { await _service.AddClassDatesAsync(1, 5, new List<int> { 5, 99 }); } catch { }
+
+        _repoMock.Verify(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>()), Times.Never);
+    }
+
+    [Test]
+    public async Task AddClassDatesAsync_ClassDateBelongingToOtherClass_ThrowsArgumentException()
+    {
+        // classDateId 6 exists but belongs to a different class than the one requested
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(new List<int>());
+
+        Assert.ThrowsAsync<ArgumentException>(() => _service.AddClassDatesAsync(1, 5, new List<int> { 6 }));
+        _repoMock.Verify(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>()), Times.Never);
+    }
+
+    [Test]
+    public async Task AddClassDatesAsync_WhenRepositoryThrows_PropagatesException()
+    {
+        _repoMock.Setup(r => r.GetExistingClassDateIdsForClassAsync(5, It.IsAny<IEnumerable<int>>())).ReturnsAsync(new List<int> { 5 });
+        _repoMock.Setup(r => r.AddClassDateAsync(It.IsAny<TrainerClassDate>()))
+            .ThrowsAsync(new InvalidOperationException("Error al asignar el horario al trainer"));
 
         Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.AddClassesAsync(1, new List<int> { 5 }));
+            () => _service.AddClassDatesAsync(1, 5, new List<int> { 5 }));
     }
 
     // ─── GetClassesWithStudentsAsync ──────────────────────────────────────────
@@ -166,6 +251,35 @@ public class TrainerServiceTests
         Assert.That(result[0].Students, Has.Count.EqualTo(1));
         Assert.That(result[0].Students[0].CustomerName, Is.EqualTo("Juan"));
         Assert.That(result[0].Students[0].CustomerLastName, Is.EqualTo("Perez"));
+    }
+
+    [Test]
+    public async Task GetClassesWithStudentsAsync_OnlyReturnsAssignedScheduleDates()
+    {
+        // The class has 3 horarios in total, but the repository only returns the 2
+        // assigned to this trainer (trainer_x_class_date), not the whole class.
+        var repoResult = new List<(Classes, IEnumerable<Customer>)>
+        {
+            (
+                new Classes
+                {
+                    id = 1, name = "Yoga",
+                    Dates = new List<ClassDate>
+                    {
+                        new ClassDate { id = 1, idclass = 1, day = "Lunes", hour = "08:00", capacity = 10 },
+                        new ClassDate { id = 2, idclass = 1, day = "Miercoles", hour = "08:00", capacity = 10 }
+                    }
+                },
+                new List<Customer>()
+            )
+        };
+        _repoMock.Setup(r => r.GetClassesWithStudentsAsync(1)).ReturnsAsync(repoResult);
+
+        var result = (await _service.GetClassesWithStudentsAsync(1)).ToList();
+
+        Assert.That(result[0].Dates, Has.Count.EqualTo(2));
+        Assert.That(result[0].Dates.Select(d => d.Day), Is.EquivalentTo(new[] { "Lunes", "Miercoles" }));
+        Assert.That(result[0].Dates.Any(d => d.Day == "Viernes"), Is.False);
     }
 
     [Test]

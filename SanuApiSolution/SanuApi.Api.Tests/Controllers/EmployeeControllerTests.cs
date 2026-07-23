@@ -67,8 +67,8 @@ public class EmployeeControllerTests
     [Test]
     public async Task AssignClasses_ValidRequest_Returns201WithCount()
     {
-        var dto = new TrainerAssignClassesRequestDto { ClassIds = new List<int> { 1, 2, 3 } };
-        _serviceMock.Setup(s => s.AddClassesAsync(1, dto.ClassIds)).ReturnsAsync(3);
+        var dto = new TrainerAssignClassesRequestDto { ClassId = 5, ClassDateIds = new List<int> { 1, 2, 3 } };
+        _serviceMock.Setup(s => s.AddClassDatesAsync(1, dto.ClassId, dto.ClassDateIds)).ReturnsAsync(3);
 
         var actionResult = await _controller.AssignClasses(1, dto);
 
@@ -81,20 +81,20 @@ public class EmployeeControllerTests
     [Test]
     public async Task AssignClasses_CallsServiceWithCorrectArguments()
     {
-        var dto = new TrainerAssignClassesRequestDto { ClassIds = new List<int> { 5, 6 } };
-        _serviceMock.Setup(s => s.AddClassesAsync(2, dto.ClassIds)).ReturnsAsync(2);
+        var dto = new TrainerAssignClassesRequestDto { ClassId = 5, ClassDateIds = new List<int> { 5, 6 } };
+        _serviceMock.Setup(s => s.AddClassDatesAsync(2, dto.ClassId, dto.ClassDateIds)).ReturnsAsync(2);
 
         await _controller.AssignClasses(2, dto);
 
-        _serviceMock.Verify(s => s.AddClassesAsync(2, dto.ClassIds), Times.Once);
+        _serviceMock.Verify(s => s.AddClassDatesAsync(2, dto.ClassId, dto.ClassDateIds), Times.Once);
     }
 
     [Test]
     public async Task AssignClasses_WhenServiceThrowsArgumentException_ReturnsBadRequest()
     {
-        var dto = new TrainerAssignClassesRequestDto { ClassIds = new List<int>() };
-        _serviceMock.Setup(s => s.AddClassesAsync(1, dto.ClassIds))
-            .ThrowsAsync(new ArgumentException("Debe especificar al menos una clase."));
+        var dto = new TrainerAssignClassesRequestDto { ClassId = 5, ClassDateIds = new List<int>() };
+        _serviceMock.Setup(s => s.AddClassDatesAsync(1, dto.ClassId, dto.ClassDateIds))
+            .ThrowsAsync(new ArgumentException("Debe especificar al menos un horario."));
 
         var actionResult = await _controller.AssignClasses(1, dto);
 
@@ -106,9 +106,9 @@ public class EmployeeControllerTests
     [Test]
     public async Task AssignClasses_WhenServiceThrowsInvalidOperationException_ReturnsBadRequest()
     {
-        var dto = new TrainerAssignClassesRequestDto { ClassIds = new List<int> { 99 } };
-        _serviceMock.Setup(s => s.AddClassesAsync(1, dto.ClassIds))
-            .ThrowsAsync(new InvalidOperationException("Error al asignar la clase al trainer"));
+        var dto = new TrainerAssignClassesRequestDto { ClassId = 5, ClassDateIds = new List<int> { 99 } };
+        _serviceMock.Setup(s => s.AddClassDatesAsync(1, dto.ClassId, dto.ClassDateIds))
+            .ThrowsAsync(new InvalidOperationException("Error al asignar el horario al trainer"));
 
         var actionResult = await _controller.AssignClasses(1, dto);
 

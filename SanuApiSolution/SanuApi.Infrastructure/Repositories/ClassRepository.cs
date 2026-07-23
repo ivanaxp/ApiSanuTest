@@ -38,19 +38,48 @@ namespace SanuApi.Infrastructure.Repositories
         public async Task AddDatesAsync(int classId, IEnumerable<ClassDate> dates)
         {
             EnsureOpen();
-            const string sql = "INSERT INTO class_date (idclass, day, hour, capacity) VALUES (@idclass, @day, @hour, @capacity)";
+            const string sql = "INSERT INTO class_date (idclass, day, hour, capacity) VALUES (@idclass, @day::day_of_week, @hour, @capacity)";
             await _db.ExecuteAsync(sql, dates);
         }
 
         public async Task ReplaceDatesAsync(int classId, IEnumerable<ClassDate> dates)
         {
             EnsureOpen();
-            await _db.ExecuteAsync("DELETE FROM class_date WHERE idclass = @ClassId", new { ClassId = classId });
-            var dateList = dates.ToList();
-            if (dateList.Count > 0)
+            var newDates = dates.ToList();
+
+            var existing = (await _db.QueryAsync<ClassDate>(
+                "SELECT id, idclass, day, hour, capacity FROM class_date WHERE idclass = @ClassId",
+                new { ClassId = classId })).ToList();
+
+            foreach (var ex in existing)
             {
-                const string sql = "INSERT INTO class_date (idclass, day, hour, capacity) VALUES (@idclass, @day, @hour, @capacity)";
-                await _db.ExecuteAsync(sql, dateList);
+                var match = newDates.FirstOrDefault(d => d.day == ex.day && d.hour == ex.hour);
+                if (match != null)
+                {
+                    if (match.capacity != ex.capacity)
+                    {
+                        await _db.ExecuteAsync(
+                            "UPDATE class_date SET capacity = @Capacity WHERE id = @Id",
+                            new { Capacity = match.capacity, Id = ex.id });
+                    }
+                    newDates.Remove(match);
+                }
+                else
+                {
+                    var inUse = await _db.ExecuteScalarAsync<int>(
+                        "SELECT COUNT(1) FROM class_x_customer WHERE idclassdate = @Id",
+                        new { Id = ex.id });
+                    if (inUse == 0)
+                    {
+                        await _db.ExecuteAsync("DELETE FROM class_date WHERE id = @Id", new { Id = ex.id });
+                    }
+                }
+            }
+
+            if (newDates.Count > 0)
+            {
+                const string sql = "INSERT INTO class_date (idclass, day, hour, capacity) VALUES (@idclass, @day::day_of_week, @hour, @capacity)";
+                await _db.ExecuteAsync(sql, newDates);
             }
         }
 
@@ -58,6 +87,53 @@ namespace SanuApi.Infrastructure.Repositories
         {
             EnsureOpen();
             return await _db.UpdateAsync(entity);
+        }
+
+        public async Task AddMembershipsAsync(int classId, IEnumerable<int> membershipIds)
+        {
+            EnsureOpen();
+            var rows = membershipIds.Select(membershipId => new { ClassId = classId, MembershipId = membershipId }).ToList();
+            if (rows.Count > 0)
+            {
+                const string sql = "INSERT INTO class_x_membership (classid, membershipid) VALUES (@ClassId, @MembershipId)";
+                await _db.ExecuteAsync(sql, rows);
+            }
+        }
+
+        public async Task ReplaceMembershipsAsync(int classId, IEnumerable<int> membershipIds)
+        {
+            EnsureOpen();
+            await _db.ExecuteAsync("DELETE FROM class_x_membership WHERE classid = @ClassId", new { ClassId = classId });
+            await AddMembershipsAsync(classId, membershipIds);
+        }
+
+        private async Task<Dictionary<int, List<Membership>>> LoadMembershipsForClassesAsync(IEnumerable<int> classIds)
+        {
+            var ids = classIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, List<Membership>>();
+
+            const string sql = @"
+                SELECT cxm.classid, m.id, m.name, m.price, m.frecuency
+                FROM class_x_membership cxm
+                INNER JOIN membership m ON m.id = cxm.membershipid
+                WHERE cxm.classid = ANY(@ClassIds)";
+
+            var rows = await _db.QueryAsync<ClassMembershipRow>(sql, new { ClassIds = ids });
+            return rows
+                .GroupBy(r => r.classid)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(r => new Membership { id = r.id, name = r.name, price = r.price, frecuency = r.frecuency }).ToList()
+                );
+        }
+
+        private class ClassMembershipRow
+        {
+            public int classid { get; set; }
+            public int id { get; set; }
+            public string name { get; set; }
+            public decimal price { get; set; }
+            public int frecuency { get; set; }
         }
 
         public async Task<int> AddCustomerClassesAsync(ClassCustomer entity)
@@ -84,7 +160,7 @@ namespace SanuApi.Infrastructure.Repositories
         {
             EnsureOpen();
             const string sql = @"
-                SELECT c.id, c.name, c.idmembership,
+                SELECT c.id, c.name,
                        cd.idclass, cd.id, cd.day, cd.hour, cd.capacity
                 FROM classes c
                 LEFT JOIN class_date cd ON cd.idclass = c.id
@@ -103,6 +179,12 @@ namespace SanuApi.Infrastructure.Repositories
                 new { Id = id },
                 splitOn: "idclass"
             );
+
+            if (result != null)
+            {
+                var membershipMap = await LoadMembershipsForClassesAsync(new[] { id });
+                result.Memberships = membershipMap.TryGetValue(id, out var mems) ? mems : new();
+            }
             return result;
         }
 
@@ -110,7 +192,7 @@ namespace SanuApi.Infrastructure.Repositories
         {
             EnsureOpen();
             const string sql = @"
-                SELECT c.id, c.name, c.idmembership,
+                SELECT c.id, c.name,
                        cd.idclass, cd.id, cd.day, cd.hour, cd.capacity
                 FROM classes c
                 LEFT JOIN class_date cd ON cd.idclass = c.id
@@ -132,6 +214,11 @@ namespace SanuApi.Infrastructure.Repositories
                 },
                 splitOn: "idclass"
             );
+
+            var membershipMap = await LoadMembershipsForClassesAsync(classDict.Keys);
+            foreach (var cls in classDict.Values)
+                cls.Memberships = membershipMap.TryGetValue(cls.id, out var mems) ? mems : new();
+
             return classDict.Values;
         }
 
@@ -139,11 +226,12 @@ namespace SanuApi.Infrastructure.Repositories
         {
             EnsureOpen();
             const string sql = @"
-                SELECT c.id, c.name, c.idmembership,
+                SELECT c.id, c.name,
                        cd.idclass, cd.id, cd.day, cd.hour, cd.capacity
                 FROM classes c
+                INNER JOIN class_x_membership cxm ON cxm.classid = c.id
                 LEFT JOIN class_date cd ON cd.idclass = c.id
-                WHERE c.idmembership = @MembershipId
+                WHERE cxm.membershipid = @MembershipId
                 ORDER BY c.id";
 
             var classDict = new Dictionary<int, Classes>();
@@ -163,6 +251,11 @@ namespace SanuApi.Infrastructure.Repositories
                 new { MembershipId = membershipId },
                 splitOn: "idclass"
             );
+
+            var membershipMap = await LoadMembershipsForClassesAsync(classDict.Keys);
+            foreach (var cls in classDict.Values)
+                cls.Memberships = membershipMap.TryGetValue(cls.id, out var mems) ? mems : new();
+
             return classDict.Values;
         }
 

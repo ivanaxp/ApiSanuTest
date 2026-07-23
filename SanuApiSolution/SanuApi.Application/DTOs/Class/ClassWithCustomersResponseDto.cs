@@ -4,7 +4,7 @@ namespace SanuApi.Application.DTOs.Class
     {
         public int ClassId { get; set; }
         public string ClassName { get; set; }
-        public int? IdMembership { get; set; }
+        public List<int> MembershipIds { get; set; } = new();
         public List<ClassDateResponseDto> Dates { get; set; } = new();
         public List<CustomerInClassDto> Customers { get; set; }
     }
